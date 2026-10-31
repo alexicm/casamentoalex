@@ -1,0 +1,133 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #f4efe6;
+  --paper-light: #fbf8f2;
+  --ink: #38382f;
+  --olive: #515b40;
+  --sage: #a5ac91;
+  --terracotta: #b77759;
+  --dusty-rose: #c89991;
+  --wine: #6e303d;
+  --sand: #d1bdab;
+  --muted-blue: #9db7c4;
+  --line: color-mix(in srgb, var(--olive) 22%, var(--paper));
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-light: var(--paper-light);
+  --color-ink: var(--ink);
+  --color-olive: var(--olive);
+  --color-sage: var(--sage);
+  --color-terracotta: var(--terracotta);
+  --color-dusty-rose: var(--dusty-rose);
+  --color-wine: var(--wine);
+  --color-sand: var(--sand);
+  --color-muted-blue: var(--muted-blue);
+  --font-serif: var(--font-cormorant);
+  --font-sans: var(--font-dm);
+  --font-script: var(--font-script);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-dm), "Gill Sans", sans-serif;
+}
+
+.paper-bg {
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(ellipse at 18% 8%, rgba(165, 172, 145, 0.2), transparent 46%),
+    radial-gradient(ellipse at 88% 18%, rgba(201, 153, 145, 0.16), transparent 42%),
+    radial-gradient(ellipse at 70% 92%, rgba(183, 119, 89, 0.14), transparent 48%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.42  0 0 0 0 0.4  0 0 0 0 0.32  0 0 0 0.28 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.28'/%3E%3C/svg%3E");
+}
+
+.watercolor-blend {
+  mix-blend-mode: multiply;
+}
+
+.section-shell {
+  width: min(640px, calc(100% - 2rem));
+  margin-inline: auto;
+}
+
+.eyebrow {
+  font-family: var(--font-dm), sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--olive);
+}
+
+.display-title {
+  font-family: var(--font-cormorant), Georgia, serif;
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  line-height: 0.95;
+}
+
+.script-line {
+  font-family: var(--font-script), cursive;
+}
+
+.ink-button {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.ink-button::after {
+  content: "";
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, white 22%, transparent);
+  transform: translate(-50%, -50%) scale(0);
+  transition: transform 0.55s ease;
+  z-index: -1;
+}
+
+.ink-button:hover::after,
+.ink-button:focus-visible::after {
+  transform: translate(-50%, -50%) scale(28);
+}
+
+.hairline {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--sage), transparent);
+}
+
+.focus-ring:focus-visible {
+  outline: 2px solid var(--olive);
+  outline-offset: 3px;
+}
+
+.admin-shell {
+  background: var(--paper-light);
+  color: var(--ink);
+}
