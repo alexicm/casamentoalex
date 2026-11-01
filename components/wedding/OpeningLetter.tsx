@@ -27,13 +27,13 @@ export function OpeningLetter({ attending, firstName, onOpened }: OpeningLetterP
   registerGsap();
 
   useGSAP(
-    (_, contextSafe) => {
-      const finish = contextSafe(() => {
+    () => {
+      const finish = () => {
         if (finishedRef.current) return;
         finishedRef.current = true;
         setOpened(true);
         onOpenedRef.current();
-      });
+      };
 
       const env = envRef.current;
       const cover = coverRef.current;
