@@ -54,6 +54,7 @@ export function Hero({ onConfirm, onDiscover }: HeroProps) {
   return (
     <section
       ref={rootRef}
+      id="inicio"
       className="relative isolate px-5 pb-20 pt-[max(1.75rem,env(safe-area-inset-top))]"
     >
       <PopParallax className="pointer-events-none absolute -left-10 top-6 w-40 sm:w-52" weight={0.12}>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 import { PageReadyProvider } from "@/components/motion/PageReadyProvider";
 import { SmoothScroll } from "@/components/motion/SmoothScroll";
 import { DressCodeLookbook } from "@/components/wedding/DressCodeLookbook";
@@ -26,19 +26,7 @@ export function WeddingExperience({
   inviteToken,
   setupPending,
 }: WeddingExperienceProps) {
-  const [formInView, setFormInView] = useState(false);
   registerGsap();
-
-  useEffect(() => {
-    const form = document.getElementById("confirmar");
-    if (!form) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setFormInView(Boolean(entry?.isIntersecting)),
-      { threshold: 0.28 },
-    );
-    observer.observe(form);
-    return () => observer.disconnect();
-  }, []);
 
   const scrollToRsvp = useCallback(() => {
     const target = document.getElementById("confirmar");
@@ -94,8 +82,8 @@ export function WeddingExperience({
             20.12.2026 · Alex & Paloma
           </p>
         </footer>
-        <StickyConfirmBar visible={!formInView} onConfirm={scrollToRsvp} />
       </div>
+      <StickyConfirmBar onConfirm={scrollToRsvp} />
     </PageReadyProvider>
   );
 }

@@ -6,7 +6,7 @@ import { SplitScale } from "@/components/motion/SplitScale";
 import type { PublicEvent } from "@/lib/event/defaults";
 
 const PALETTE = [
-  { id: "wine", label: "Vinho", value: "#4B1321", hint: "Um tom profundo, próximo ao envelope." },
+  { id: "wine", label: "Vinho", value: "#4B1321", hint: "" },
   { id: "rose", label: "Rosé", value: "#C9989B", hint: "Suave, em seda ou crepe leve." },
   { id: "terracotta", label: "Terracota", value: "#B77657", hint: "Terra quente, muito fotogênico." },
   { id: "mustard", label: "Mostarda", value: "#D4B46A", hint: "Um amarelo de jardim, claro e fresco." },
@@ -135,7 +135,9 @@ export function DressCodeLookbook({ event }: DressCodeLookbookProps) {
             );
           })}
         </div>
-        <p className="mt-3 text-center text-sm text-ink/65">{color.hint}</p>
+        {color.hint ? (
+          <p className="mt-3 text-center text-sm text-ink/65">{color.hint}</p>
+        ) : null}
 
         <div className="mx-auto mt-8 grid max-w-xl gap-2">
           {DETAILS.map((item) => {
