@@ -1,8 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useId, useRef, useState } from "react";
-import { Flip, registerGsap } from "@/lib/gsap";
+import { useState } from "react";
 import { SplitScale } from "@/components/motion/SplitScale";
 import type { PublicEvent } from "@/lib/event/defaults";
 
@@ -16,60 +15,6 @@ const PALETTE = [
   { id: "lilac", label: "Lilás", value: "#B8A4D4", hint: "Um toque suave para vestidos longos." },
   { id: "sky", label: "Azul céu", value: "#A8C5E2", hint: "Claro, fresco e fácil de dançar." },
 ] as const;
-
-type Plate = {
-  src: string;
-  alt: string;
-  caption: string;
-};
-
-const STYLES: {
-  id: "dresses" | "tailoring" | "free";
-  label: string;
-  title: string;
-  body: string;
-  plates: Plate[];
-}[] = [
-  {
-    id: "dresses",
-    label: "Vestidos e conjuntos",
-    title: "Leveza de final de tarde",
-    body: "Midi ou longo, tecido fluido e um salto confortável ou sapato bloco. Um casaco leve se esfriar.",
-    plates: [
-      {
-        src: "/assets/wedding/lookbook/vestidos-aquarela.jpg",
-        alt: "Ilustração em aquarela de vestidos longos em amarelo, rosé, oliva, lilás, azul céu, terracota e menta",
-        caption: "Vestidos longos",
-      },
-    ],
-  },
-  {
-    id: "tailoring",
-    label: "Alfaiataria",
-    title: "Traje leve, bem cortado",
-    body: "Alfaiataria fresca em tons naturais, camisa leve e sapato em que você consiga dançar.",
-    plates: [
-      {
-        src: "/assets/wedding/lookbook/jardim-misto.jpg",
-        alt: "Ilustração em aquarela de convidados com ternos, camisas e vestidos em tons de terra e jardim",
-        caption: "Alfaiataria e vestidos",
-      },
-    ],
-  },
-  {
-    id: "free",
-    label: "Outras inspirações",
-    title: "Do seu jeito mais especial",
-    body: "Vale apostar em tecidos naturais, peças sofisticadas sem excessos, estampas delicadas e produções que combinem elegância e descontração.",
-    plates: [
-      {
-        src: "/assets/wedding/lookbook/looks-inspiracao.jpg",
-        alt: "Lookbook com vestidos florais e sólidos ao lado de camisas e alfaiataria clara",
-        caption: "Looks de inspiração",
-      },
-    ],
-  },
-];
 
 const DETAILS = [
   {
@@ -99,26 +44,8 @@ type DressCodeLookbookProps = {
 };
 
 export function DressCodeLookbook({ event }: DressCodeLookbookProps) {
-  const tabId = useId();
-  const panelRef = useRef<HTMLDivElement>(null);
-  const [style, setStyle] = useState<(typeof STYLES)[number]["id"]>("dresses");
   const [color, setColor] = useState<(typeof PALETTE)[number]>(PALETTE[0]);
   const [openDetail, setOpenDetail] = useState<string | null>(null);
-  const current = STYLES.find((item) => item.id === style) ?? STYLES[0];
-  registerGsap();
-
-  function selectStyle(next: (typeof STYLES)[number]["id"]) {
-    const panel = panelRef.current;
-    if (!panel || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setStyle(next);
-      return;
-    }
-    const state = Flip.getState(panel);
-    setStyle(next);
-    requestAnimationFrame(() => {
-      Flip.from(state, { duration: 0.7, ease: "power2.out", absolute: false });
-    });
-  }
 
   return (
     <section id="dress-code" className="px-5 py-16 sm:py-24">
@@ -135,88 +62,52 @@ export function DressCodeLookbook({ event }: DressCodeLookbookProps) {
         </p>
 
         <div
-          role="tablist"
-          aria-label="Estilos de composição"
-          className="mx-auto mt-8 grid max-w-xl grid-cols-3 gap-2"
-        >
-          {STYLES.map((item) => {
-            const selected = item.id === style;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                role="tab"
-                id={`${tabId}-${item.id}`}
-                aria-selected={selected}
-                aria-controls={`${tabId}-panel`}
-                onClick={() => selectStyle(item.id)}
-                className={`focus-ring min-h-12 rounded-2xl px-2 text-[0.72rem] leading-tight tracking-wide ${
-                  selected
-                    ? "bg-burgundy text-ivory"
-                    : "border border-line bg-ivory text-burgundy"
-                }`}
-              >
-                {item.label}
-              </button>
-            );
-          })}
-        </div>
-
-        <div
-          ref={panelRef}
-          role="tabpanel"
-          id={`${tabId}-panel`}
-          aria-labelledby={`${tabId}-${current.id}`}
-          className="paper-card mt-6 overflow-hidden p-4 transition-colors duration-500 sm:p-6"
+          className="paper-card mt-8 overflow-hidden p-4 transition-colors duration-500 sm:p-6"
           style={{ background: `${color.value}14` }}
         >
-          <div className="space-y-6">
-            {current.plates.map((plate) => (
-              <figure key={plate.src}>
-                <div className="overflow-hidden rounded-2xl bg-ivory">
-                  <Image
-                    src={plate.src}
-                    alt={plate.alt}
-                    width={1024}
-                    height={1024}
-                    sizes="(max-width: 640px) 92vw, 920px"
-                    className="h-auto w-full"
-                  />
-                </div>
-                <figcaption className="mt-2 text-center text-[0.7rem] tracking-[0.2em] text-olive uppercase">
-                  {plate.caption}
-                </figcaption>
-              </figure>
-            ))}
-          </div>
-          {current.id === "free" ? (
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              <div className="rounded-2xl border border-line bg-ivory/80 px-4 py-4">
-                <p className="text-[0.68rem] tracking-[0.2em] text-olive uppercase">
-                  Paleta de inspiração
-                </p>
-                <p className="mt-2 font-serif text-xl text-burgundy">Cores suaves</p>
-                <p className="mt-2 text-sm leading-relaxed text-ink/75">
-                  Estampas delicadas e cores suaves são muito bem-vindas. Você
-                  também pode se inspirar em tons que conversem com o jardim.
-                </p>
-              </div>
-              <div className="rounded-2xl border border-line bg-ivory/80 px-4 py-4">
-                <p className="text-[0.68rem] tracking-[0.2em] text-olive uppercase">
-                  Tenha em conta
-                </p>
-                <ul className="mt-3 space-y-2 text-sm leading-relaxed text-ink/75">
-                  <li>Evite o uso de preto e branco.</li>
-                  <li>Prefira roupas leves, fluidas e confortáveis.</li>
-                  <li>Escolha uma produção elegante, sem perder a leveza.</li>
-                </ul>
-              </div>
+          <figure>
+            <div className="overflow-hidden rounded-2xl bg-ivory">
+              <Image
+                src="/assets/wedding/lookbook/looks-inspiracao.jpg"
+                alt="Lookbook com vestidos florais e sólidos ao lado de camisas e alfaiataria clara"
+                width={1024}
+                height={1024}
+                sizes="(max-width: 640px) 92vw, 920px"
+                className="h-auto w-full"
+              />
             </div>
-          ) : null}
+            <figcaption className="mt-2 text-center text-[0.7rem] tracking-[0.2em] text-olive uppercase">
+              Looks de inspiração
+            </figcaption>
+          </figure>
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <div className="rounded-2xl border border-line bg-ivory/80 px-4 py-4">
+              <p className="text-[0.68rem] tracking-[0.2em] text-olive uppercase">
+                Paleta de inspiração
+              </p>
+              <p className="mt-2 font-serif text-xl text-burgundy">Cores suaves</p>
+              <p className="mt-2 text-sm leading-relaxed text-ink/75">
+                Estampas delicadas e cores suaves são muito bem-vindas. Você
+                também pode se inspirar em tons que conversem com o jardim.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-line bg-ivory/80 px-4 py-4">
+              <p className="text-[0.68rem] tracking-[0.2em] text-olive uppercase">
+                Tenha em conta
+              </p>
+              <ul className="mt-3 space-y-2 text-sm leading-relaxed text-ink/75">
+                <li>Evite o uso de preto e branco.</li>
+                <li>Prefira roupas leves, fluidas e confortáveis.</li>
+                <li>Escolha uma produção elegante, sem perder a leveza.</li>
+              </ul>
+            </div>
+          </div>
           <div className="mt-5 text-center">
-            <h3 className="font-serif text-2xl text-burgundy">{current.title}</h3>
+            <h3 className="font-serif text-2xl text-burgundy">Do seu jeito mais especial</h3>
             <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-ink/80">
-              {current.body}
+              Vale apostar em tecidos naturais, peças sofisticadas sem excessos,
+              estampas delicadas e produções que combinem elegância e
+              descontração.
             </p>
           </div>
         </div>
