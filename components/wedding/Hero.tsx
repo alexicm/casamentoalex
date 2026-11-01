@@ -90,7 +90,7 @@ export function Hero({ onConfirm, onDiscover }: HeroProps) {
         </p>
         <p className="hero-copy mt-3 max-w-[28rem] text-[0.98rem] leading-relaxed text-ink/80">
           Não queremos reunir pessoas para testemunhar um casamento. Queremos
-          reunir as pessoas que amam para celebrar uma história que já estamos
+          reunir as pessoas que amamos para celebrar uma história que já estamos
           vivendo. Vocês fazem parte disso!
         </p>
 

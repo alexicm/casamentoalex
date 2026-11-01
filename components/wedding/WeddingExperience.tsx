@@ -9,9 +9,9 @@ import { FinalLetter } from "@/components/wedding/FinalLetter";
 import { Hero } from "@/components/wedding/Hero";
 import { RSVPForm } from "@/components/wedding/RSVPForm";
 import { GuestWitnesses } from "@/components/wedding/GuestWitnesses";
-import { SharedStories } from "@/components/wedding/SharedStories";
 import { StickyConfirmBar } from "@/components/wedding/StickyConfirmBar";
 import { Story } from "@/components/wedding/Story";
+import { WineToast } from "@/components/wedding/WineToast";
 import type { PublicEvent } from "@/lib/event/defaults";
 import { gsap, registerGsap, ScrollToPlugin } from "@/lib/gsap";
 
@@ -71,10 +71,10 @@ export function WeddingExperience({
       <div className="paper-bg min-h-svh overflow-x-clip">
         <Hero onConfirm={scrollToRsvp} onDiscover={scrollToDetails} />
         <Story />
-        <SharedStories />
         <GuestWitnesses />
         <EventDetails event={event} />
         <DressCodeLookbook event={event} />
+        <WineToast />
         <RSVPForm inviteToken={inviteToken} setupPending={setupPending} />
         <FinalLetter onConfirm={scrollToRsvp} />
         <footer className="burgundy-stage px-5 pb-[max(2rem,env(safe-area-inset-bottom))] pt-8 text-center">
