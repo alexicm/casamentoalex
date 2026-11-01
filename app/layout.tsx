@@ -1,19 +1,19 @@
 import type { Metadata, Viewport } from "next";
-import { Cormorant_Garamond, DM_Sans, Great_Vibes } from "next/font/google";
+import { Figtree, Fraunces, Pinyon_Script } from "next/font/google";
 import "./globals.css";
 
-const cormorant = Cormorant_Garamond({
+const fraunces = Fraunces({
   subsets: ["latin"],
-  variable: "--font-cormorant",
-  weight: ["400", "500", "600"],
+  variable: "--font-display",
+  axes: ["SOFT", "WONK", "opsz"],
 });
 
-const dmSans = DM_Sans({
+const figtree = Figtree({
   subsets: ["latin"],
-  variable: "--font-dm",
+  variable: "--font-body",
 });
 
-const greatVibes = Great_Vibes({
+const pinyon = Pinyon_Script({
   subsets: ["latin"],
   variable: "--font-script",
   weight: "400",
@@ -57,7 +57,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="pt-BR"
-      className={`${cormorant.variable} ${dmSans.variable} ${greatVibes.variable} h-full antialiased`}
+      className={`${fraunces.variable} ${figtree.variable} ${pinyon.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-paper text-ink">{children}</body>
     </html>

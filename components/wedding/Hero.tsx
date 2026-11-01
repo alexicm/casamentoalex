@@ -71,7 +71,7 @@ export function Hero({ onConfirm, onDiscover }: HeroProps) {
         <p className="hero-copy eyebrow mb-3">Um encontro</p>
         <h1 className="hero-name display-title text-[clamp(2.6rem,11vw,4.8rem)] text-burgundy">
           Alex
-          <span className="mx-2 inline-block font-script text-[0.55em] normal-case tracking-normal text-terracotta">
+          <span className="mx-1 inline-block font-serif text-[0.62em] italic font-normal tracking-normal text-terracotta">
             &
           </span>
           Paloma

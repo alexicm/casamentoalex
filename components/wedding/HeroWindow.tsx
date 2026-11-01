@@ -163,11 +163,6 @@ export function HeroWindow({ onOpened }: HeroWindowProps) {
         </div>
         <div className="mx-auto h-3 w-[92%] rounded-b-[10px] bg-[#d8c7b6] shadow-[0_10px_16px_rgba(49,11,20,0.12)]" />
       </button>
-      {!opened ? (
-        <p className="mt-3 text-center text-[0.7rem] tracking-[0.2em] text-olive uppercase">
-          Role para a janela se abrir
-        </p>
-      ) : null}
     </div>
   );
 }

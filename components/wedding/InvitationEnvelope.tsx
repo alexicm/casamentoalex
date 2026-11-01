@@ -69,8 +69,8 @@ export function InvitationEnvelope() {
         <div className="envelope-body relative mx-auto h-[250px] w-full">
           <div className="absolute inset-x-[10%] top-[22%] z-10 overflow-hidden rounded-t-[10px]">
             <div className="envelope-card mx-auto w-full bg-[#fbf6ee] px-5 py-7 text-center shadow-[0_10px_24px_rgba(16,6,10,0.18)]">
-              <p className="font-serif text-xl tracking-[0.16em] text-burgundy uppercase">
-                Alex & Paloma
+              <p className="font-serif text-2xl text-burgundy">
+                Alex <span className="italic text-terracotta">&</span> Paloma
               </p>
               <p className="mt-2 text-[0.68rem] tracking-[0.22em] text-olive uppercase">
                 20.12.2026

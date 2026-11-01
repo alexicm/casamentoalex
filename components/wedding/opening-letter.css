@@ -1,0 +1,107 @@
+.letter-open-scene {
+  perspective: 1600px;
+  perspective-origin: 50% 40%;
+}
+
+.open-env-stage {
+  width: min(86vw, 300px);
+  height: 380px;
+  position: relative;
+  margin-inline: auto;
+  transform-style: preserve-3d;
+}
+
+.open-env {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 18px;
+  height: 176px;
+  transform-style: preserve-3d;
+  filter: drop-shadow(0 22px 28px rgba(49, 11, 20, 0.18));
+  will-change: transform;
+}
+
+.open-env-back {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: 3px 3px 8px 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 248, 236, 0.16), transparent 38%),
+    linear-gradient(180deg, #c4a882 0%, #d3b894 42%, #c2a57c 100%);
+}
+
+.open-env-letter {
+  position: absolute;
+  left: 7%;
+  bottom: 16%;
+  z-index: 1;
+  width: 86%;
+  min-height: 188px;
+  padding: 1.45rem 1.2rem 1.5rem;
+  border: 1px solid #ead9c2;
+  border-radius: 2px;
+  background:
+    linear-gradient(#fffdf8, #fffdf8) padding-box,
+    linear-gradient(180deg, #fffdf8 0%, #f4eadc 100%);
+  box-shadow:
+    0 14px 26px rgba(49, 11, 20, 0.12),
+    inset 0 0 0 8px rgba(255, 255, 255, 0.35);
+  will-change: transform, opacity;
+}
+
+.open-env-front {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  border-radius: 0 0 8px 8px;
+  background:
+    linear-gradient(180deg, rgba(75, 19, 33, 0.08), transparent 18%),
+    linear-gradient(180deg, #d2b68d 0%, #be9f72 100%);
+  clip-path: polygon(0 34%, 50% 86%, 100% 34%, 100% 100%, 0 100%);
+}
+
+.open-env-flap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 4;
+  width: 100%;
+  height: 56%;
+  transform-origin: top center;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.open-env-flap-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+
+.open-env-flap-outer {
+  background: linear-gradient(180deg, #e4d0af 0%, #c9ae8d 100%);
+}
+
+.open-env-flap-liner {
+  background: linear-gradient(180deg, #4b1321 0%, #7a3344 100%);
+  transform: rotateX(180deg);
+}
+
+.open-env-seal {
+  position: absolute;
+  top: 44%;
+  left: 50%;
+  z-index: 6;
+  display: flex;
+  height: 3.5rem;
+  width: 3.5rem;
+  transform: translate(-50%, -50%);
+  align-items: center;
+  justify-content: center;
+  will-change: transform, opacity;
+}
