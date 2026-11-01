@@ -50,6 +50,7 @@ export async function getPublicEvent(): Promise<PublicEvent> {
       rsvpDeadline: row.rsvp_deadline,
       publicEnabled: row.public_enabled,
       calendarDurationHours: row.calendar_duration_hours,
+      addressVerified: DEFAULT_EVENT.addressVerified,
     };
   } catch {
     return DEFAULT_EVENT;

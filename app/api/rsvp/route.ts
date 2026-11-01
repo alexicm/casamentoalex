@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { DEFAULT_EVENT } from "@/lib/event/defaults";
+import { canUseLocalRsvp, saveLocalRsvp } from "@/lib/rsvp/local-store";
 import { suggestMatches } from "@/lib/rsvp/matching";
 import { normalizeName } from "@/lib/rsvp/normalize";
 import { allowRequest, hashIp } from "@/lib/rsvp/rate-limit";
+import { createReceiptToken, hashReceiptToken } from "@/lib/rsvp/receipt";
 import { hashInviteToken } from "@/lib/rsvp/tokens";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured, SETUP_PENDING_MESSAGE } from "@/lib/supabase/env";
@@ -13,7 +15,8 @@ import {
 } from "@/lib/validators/rsvp";
 
 export async function POST(request: Request) {
-  if (!isSupabaseConfigured()) {
+  const supabaseReady = isSupabaseConfigured();
+  if (!supabaseReady && !canUseLocalRsvp()) {
     return NextResponse.json(
       { message: SETUP_PENDING_MESSAGE, setupPending: true },
       { status: 503 },
@@ -22,7 +25,7 @@ export async function POST(request: Request) {
 
   const forwarded = request.headers.get("x-forwarded-for") ?? "unknown";
   const ipHash = hashIp(forwarded.split(",")[0]?.trim() ?? "unknown");
-  if (!allowRequest(ipHash)) {
+  if (supabaseReady && !allowRequest(ipHash)) {
     return NextResponse.json(
       { message: "Muitas tentativas em pouco tempo. Espere um pouco e tente de novo." },
       { status: 429 },
@@ -47,6 +50,29 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Recebemos sua resposta com carinho." }, { status: 200 });
   }
 
+  const receipt = input.idempotencyKey
+    ? input.idempotencyKey.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 48) || createReceiptToken()
+    : createReceiptToken();
+  const receiptHash = hashReceiptToken(receipt);
+  const contact = input.contact?.trim() || null;
+
+  if (!supabaseReady) {
+    const saved = await saveLocalRsvp({
+      fullName: input.fullName.trim(),
+      attending: input.attending,
+      contact,
+      receipt,
+      receiptHash,
+      idempotencyKey: input.idempotencyKey ?? null,
+    });
+    return NextResponse.json({
+      message: "Recebemos sua resposta com carinho. Obrigado por nos contar!",
+      validated: false,
+      attending: saved.attending,
+      receipt: saved.receipt,
+    });
+  }
+
   const supabase = createServiceClient();
   const { data: event, error: eventError } = await supabase
     .from("events")
@@ -62,7 +88,6 @@ export async function POST(request: Request) {
   }
 
   const normalized = normalizeName(input.fullName);
-  const contact = input.contact?.trim() || null;
   const token = input.inviteToken?.trim() || "";
 
   const { data: guests } = await supabase
@@ -118,6 +143,23 @@ export async function POST(request: Request) {
         ? "suggested"
         : "unmatched";
 
+  if (input.idempotencyKey) {
+    const { data: existing } = await supabase
+      .from("rsvp_submissions")
+      .select("id, attendance_choice, review_status")
+      .eq("event_id", event.id)
+      .eq("idempotency_key", input.idempotencyKey)
+      .maybeSingle();
+    if (existing) {
+      return NextResponse.json({
+        message: "Recebemos sua resposta com carinho. Obrigado por nos contar!",
+        validated: existing.review_status === "linked",
+        attending: existing.attendance_choice,
+        receipt,
+      });
+    }
+  }
+
   const { data: submission, error: insertError } = await supabase
     .from("rsvp_submissions")
     .insert({
@@ -133,6 +175,8 @@ export async function POST(request: Request) {
       request_fingerprint_hash: ipHash,
       suggested_guest_ids: matching.candidates.map((candidate) => candidate.id),
       reviewed_at: validated ? new Date().toISOString() : null,
+      receipt_token_hash: receiptHash,
+      idempotency_key: input.idempotencyKey ?? null,
     })
     .select("id")
     .single();
@@ -185,5 +229,6 @@ export async function POST(request: Request) {
       : "Recebemos sua resposta com carinho. Obrigado por nos contar!",
     validated,
     attending: input.attending,
+    receipt,
   });
 }

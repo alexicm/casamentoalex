@@ -39,6 +39,7 @@ describe("lista-base privada", () => {
     expect(ALEX_GUESTS.map((guest) => guest.displayName)).toContain("Marcos Araújo");
     expect(ALEX_GUESTS.map((guest) => guest.displayName)).toContain("Carolina Seidner");
     expect(ALEX_GUESTS.map((guest) => guest.displayName)).toContain("João Victor Freitas");
+    expect(ALEX_GUESTS.map((guest) => guest.displayName)).toContain("Victor Luiz");
   });
 
   it("usa seed keys únicas", () => {

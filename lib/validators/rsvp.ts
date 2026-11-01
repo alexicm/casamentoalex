@@ -18,6 +18,7 @@ export const rsvpInputSchema = z.object({
   }),
   website: z.string().optional(),
   inviteToken: z.string().max(200).optional(),
+  idempotencyKey: z.string().max(80).optional(),
 });
 
 export type RsvpInput = z.infer<typeof rsvpInputSchema>;

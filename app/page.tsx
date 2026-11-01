@@ -1,5 +1,6 @@
 import { WeddingExperience } from "@/components/wedding/WeddingExperience";
 import { getPublicEvent } from "@/lib/event/load";
+import { canUseLocalRsvp } from "@/lib/rsvp/local-store";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 export default async function Home({ searchParams }: PageProps<"/">) {
@@ -12,7 +13,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
     <WeddingExperience
       event={event}
       inviteToken={inviteToken}
-      setupPending={!isSupabaseConfigured()}
+      setupPending={!isSupabaseConfigured() && !canUseLocalRsvp()}
     />
   );
 }

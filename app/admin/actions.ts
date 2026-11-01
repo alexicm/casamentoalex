@@ -183,7 +183,7 @@ export async function generateInviteLink(guestId: string) {
     .update({ invite_token_hash: hash, token_issued_at: new Date().toISOString() })
     .eq("id", guestId);
   const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-  const url = `${origin}/i/${token}`;
+  const url = `${origin}/convite?t=${token}`;
   const qr = await QRCode.toDataURL(url, { margin: 1, width: 280 });
   revalidatePath("/admin/dashboard");
   return { url, qr };

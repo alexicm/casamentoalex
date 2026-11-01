@@ -1,77 +1,64 @@
 "use client";
 
-import { useState } from "react";
-import { composeSubmittedName, needsLastName } from "@/lib/rsvp/normalize";
+import { useId, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createRitual, firstNameOf, writeRitual } from "@/lib/confirmation-ritual";
 
 type RSVPFormProps = {
   inviteToken?: string;
   setupPending: boolean;
-  onAnswered?: () => void;
 };
 
 type Status =
   | { kind: "idle" }
   | { kind: "loading" }
-  | { kind: "error"; message: string }
-  | {
-      kind: "success";
-      attending: boolean;
-      validated: boolean;
-    };
+  | { kind: "error"; message: string };
 
-export function RSVPForm({ inviteToken, setupPending, onAnswered }: RSVPFormProps) {
+export function RSVPForm({ inviteToken, setupPending }: RSVPFormProps) {
+  const router = useRouter();
+  const idempotencyKey = useId();
   const [attending, setAttending] = useState<boolean | null>(null);
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [singleGivenName, setSingleGivenName] = useState(false);
+  const [fullName, setFullName] = useState("");
   const [contact, setContact] = useState("");
   const [consent, setConsent] = useState(false);
   const [website, setWebsite] = useState("");
   const [status, setStatus] = useState<Status>({ kind: "idle" });
+  const sending = useRef(false);
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (sending.current) return;
     if (attending === null) {
       setStatus({ kind: "error", message: "Escolha se poderá estar presente." });
       return;
     }
 
     const formData = new FormData(event.currentTarget);
-    const submittedFirst = String(formData.get("firstName") ?? firstName);
-    const submittedLast = singleGivenName
-      ? ""
-      : String(formData.get("lastName") ?? lastName);
-    const fullName = composeSubmittedName(submittedFirst, submittedLast);
-    if (needsLastName(submittedFirst, singleGivenName) && !submittedLast) {
-      setStatus({
-        kind: "error",
-        message: "Escreva também o sobrenome, como no convite.",
-      });
-      return;
-    }
-    if (fullName.length < 2) {
+    const submittedName = String(formData.get("fullName") ?? fullName).trim();
+    if (submittedName.length < 2) {
       setStatus({ kind: "error", message: "Escreva seu nome como no convite." });
       return;
     }
 
+    sending.current = true;
     setStatus({ kind: "loading" });
     try {
       const response = await fetch("/api/rsvp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          fullName,
+          fullName: submittedName,
           attending,
           contact,
           consent,
           website,
           inviteToken,
+          idempotencyKey,
         }),
       });
       const payload = (await response.json()) as {
         message?: string;
-        validated?: boolean;
-        attending?: boolean;
+        receipt?: string;
       };
       if (!response.ok) {
         setStatus({
@@ -82,51 +69,37 @@ export function RSVPForm({ inviteToken, setupPending, onAnswered }: RSVPFormProp
         });
         return;
       }
-      setStatus({
-        kind: "success",
-        attending: payload.attending ?? attending,
-        validated: Boolean(payload.validated),
+      const ritual = createRitual({
+        receipt: payload.receipt ?? "",
+        attending,
+        firstName: firstNameOf(submittedName),
       });
-      onAnswered?.();
+      writeRitual(ritual);
+      const query = new URLSearchParams();
+      if (payload.receipt) query.set("r", payload.receipt);
+      query.set("p", attending ? "1" : "0");
+      router.push(`/confirmando?${query.toString()}`);
     } catch {
       setStatus({
         kind: "error",
         message: "Não foi possível enviar agora. Confira sua conexão e tente novamente.",
       });
+    } finally {
+      sending.current = false;
     }
-  }
-
-  if (status.kind === "success") {
-    const title = status.validated
-      ? status.attending
-        ? "Presença confirmada! Estamos muito felizes em dividir esse dia com você."
-        : "Vamos sentir sua falta, mas agradecemos por nos avisar."
-      : "Recebemos sua resposta com carinho. Obrigado por nos contar!";
-    return (
-      <section
-        id="confirmar"
-        className="px-5 py-16 sm:py-24"
-        aria-live="polite"
-      >
-        <div className="section-shell rounded-[28px] border border-olive/10 bg-paper-light/80 p-8 text-center">
-          <p className="eyebrow">Obrigado</p>
-          <h2 className="mt-4 font-serif text-3xl text-olive">{title}</h2>
-          {!status.validated ? (
-            <p className="mt-4 text-sm leading-relaxed text-ink/75">
-              Vamos conferir os detalhes com carinho. Isso ainda não é a
-              confirmação final da lista.
-            </p>
-          ) : null}
-        </div>
-      </section>
-    );
   }
 
   return (
     <section id="confirmar" className="px-5 py-16 sm:py-24">
-      <form onSubmit={onSubmit} className="section-shell">
-        <p className="eyebrow text-center">RSVP</p>
-        <h2 className="mt-3 text-center font-serif text-3xl text-olive sm:text-4xl">
+      <form onSubmit={onSubmit} className="letter-sheet section-shell">
+        <div className="letter-ribbon">
+          <span className="font-script text-2xl text-ivory">A & P</span>
+        </div>
+
+        <p className="mt-7 text-center text-[0.7rem] tracking-[0.28em] text-olive uppercase">
+          Confirmação
+        </p>
+        <h2 className="mt-3 text-center font-serif text-3xl text-burgundy sm:text-4xl">
           Só falta você confirmar
         </h2>
         <p className="mx-auto mt-4 max-w-md text-center text-[0.98rem] leading-relaxed text-ink/80">
@@ -135,79 +108,50 @@ export function RSVPForm({ inviteToken, setupPending, onAnswered }: RSVPFormProp
         </p>
 
         {setupPending ? (
-          <p
-            className="mt-6 rounded-2xl border border-terracotta/30 bg-terracotta/10 px-4 py-3 text-sm text-wine"
-            role="status"
-          >
+          <p className="mt-5 rounded-xl border border-terracotta/30 bg-terracotta/8 px-4 py-3 text-sm text-wine-soft" role="status">
             As confirmações ainda estão sendo ligadas ao sistema. Você pode
-            preencher o formulário, mas a resposta pode não ser gravada agora.
+            preencher, mas a resposta pode não ser gravada agora.
           </p>
         ) : null}
 
-        <fieldset className="mt-8 grid gap-3 sm:grid-cols-2">
+        <fieldset className="mt-8 grid gap-3">
           <legend className="sr-only">Você estará presente?</legend>
           <Choice
             selected={attending === true}
             onSelect={() => setAttending(true)}
-            label="Sim, estarei presente"
+            title="Sim, estarei presente"
+            note="Pode contar comigo nesse dia."
           />
           <Choice
             selected={attending === false}
             onSelect={() => setAttending(false)}
-            label="Não poderei comparecer"
+            title="Não poderei comparecer"
+            note="Vou sentir falta, mas aviso com carinho."
           />
         </fieldset>
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <label className="block">
-            <span className="mb-2 block text-sm text-olive">Nome</span>
-            <input
-              required
-              name="firstName"
-              autoComplete="given-name"
-              value={firstName}
-              onChange={(event) => setFirstName(event.target.value)}
-              placeholder="Como no convite"
-              className="focus-ring min-h-12 w-full rounded-2xl border border-olive/20 bg-paper-light px-4 text-base text-ink"
-            />
-          </label>
-          <label className="block">
-            <span className="mb-2 block text-sm text-olive">Sobrenome</span>
-            <input
-              name="lastName"
-              autoComplete="family-name"
-              value={lastName}
-              onChange={(event) => setLastName(event.target.value)}
-              placeholder="Como no convite"
-              required={needsLastName(firstName, singleGivenName)}
-              disabled={singleGivenName}
-              className="focus-ring min-h-12 w-full rounded-2xl border border-olive/20 bg-paper-light px-4 text-base text-ink disabled:opacity-50"
-            />
-          </label>
-        </div>
-        <p className="mt-2 text-xs leading-relaxed text-olive/80">
-          Use o nome e o sobrenome pelos quais você foi convidado(a). Isso nos
-          ajuda a encontrar você na lista sem misturar pessoas com o mesmo
-          prenome.
+        <label className="mt-8 block">
+          <span className="mb-1 block text-[0.7rem] tracking-[0.18em] text-olive uppercase">
+            Seu nome completo
+          </span>
+          <input
+            required
+            name="fullName"
+            autoComplete="name"
+            value={fullName}
+            onChange={(event) => setFullName(event.target.value)}
+            placeholder="Como no convite"
+            className="letter-field focus-ring min-h-12 w-full bg-transparent px-1 text-lg text-ink"
+          />
+        </label>
+        <p className="mt-2 text-xs leading-relaxed text-ink/55">
+          Se tiver sobrenome, escreva também — assim não misturamos pessoas com
+          o mesmo prenome.
         </p>
 
-        <label className="mt-4 flex items-start gap-3 text-sm leading-relaxed text-ink/80">
-          <input
-            type="checkbox"
-            checked={singleGivenName}
-            onChange={(event) => {
-              const checked = event.target.checked;
-              setSingleGivenName(checked);
-              if (checked) setLastName("");
-            }}
-            className="mt-1 h-5 w-5 accent-olive"
-          />
-          Meu nome no convite tem só uma palavra
-        </label>
-
-        <label className="mt-4 block">
-          <span className="mb-2 block text-sm text-olive">
-            WhatsApp <span className="text-sage">(opcional)</span>
+        <label className="mt-6 block">
+          <span className="mb-1 block text-[0.7rem] tracking-[0.18em] text-olive uppercase">
+            WhatsApp <span className="normal-case tracking-normal text-ink/45">(opcional)</span>
           </span>
           <input
             name="contact"
@@ -216,7 +160,7 @@ export function RSVPForm({ inviteToken, setupPending, onAnswered }: RSVPFormProp
             value={contact}
             onChange={(event) => setContact(event.target.value)}
             placeholder="Para falarmos se precisar"
-            className="focus-ring min-h-12 w-full rounded-2xl border border-olive/20 bg-paper-light px-4 text-base text-ink"
+            className="letter-field focus-ring min-h-12 w-full bg-transparent px-1 text-lg text-ink"
           />
         </label>
 
@@ -229,12 +173,12 @@ export function RSVPForm({ inviteToken, setupPending, onAnswered }: RSVPFormProp
           />
         </div>
 
-        <label className="mt-5 flex items-start gap-3 text-sm leading-relaxed text-ink/80">
+        <label className="mt-6 flex items-start gap-3 text-sm leading-relaxed text-ink/75">
           <input
             type="checkbox"
             checked={consent}
             onChange={(event) => setConsent(event.target.checked)}
-            className="mt-1 h-5 w-5 accent-olive"
+            className="mt-1 h-5 w-5 accent-burgundy"
             required
           />
           Autorizo o uso do meu nome e contato apenas para organização deste
@@ -242,7 +186,7 @@ export function RSVPForm({ inviteToken, setupPending, onAnswered }: RSVPFormProp
         </label>
 
         {status.kind === "error" ? (
-          <p className="mt-4 text-sm text-wine" role="alert">
+          <p className="mt-4 text-sm text-wine-soft" role="alert">
             {status.message}
           </p>
         ) : null}
@@ -250,7 +194,7 @@ export function RSVPForm({ inviteToken, setupPending, onAnswered }: RSVPFormProp
         <button
           type="submit"
           disabled={status.kind === "loading"}
-          className="ink-button focus-ring mt-7 min-h-12 w-full rounded-full bg-wine px-6 text-sm tracking-[0.16em] text-paper-light uppercase disabled:opacity-60"
+          className="ink-button focus-ring mt-8 min-h-12 w-full rounded-full bg-burgundy px-6 text-sm tracking-[0.16em] text-ivory uppercase disabled:opacity-60"
         >
           {status.kind === "loading" ? "Enviando..." : "Enviar minha resposta"}
         </button>
@@ -262,24 +206,29 @@ export function RSVPForm({ inviteToken, setupPending, onAnswered }: RSVPFormProp
 function Choice({
   selected,
   onSelect,
-  label,
+  title,
+  note,
 }: {
   selected: boolean;
   onSelect: () => void;
-  label: string;
+  title: string;
+  note: string;
 }) {
   return (
     <button
       type="button"
       onClick={onSelect}
       aria-pressed={selected}
-      className={`focus-ring min-h-12 rounded-full px-4 text-sm tracking-[0.04em] ${
+      className={`focus-ring rounded-[18px] border px-4 py-4 text-left ${
         selected
-          ? "bg-olive text-paper-light"
-          : "border border-olive/20 bg-paper-light text-olive"
+          ? "border-burgundy bg-burgundy text-ivory"
+          : "border-line bg-[#fbf6ee] text-ink"
       }`}
     >
-      {label}
+      <span className="block font-serif text-xl">{title}</span>
+      <span className={`mt-1 block text-sm ${selected ? "text-ivory/75" : "text-ink/60"}`}>
+        {note}
+      </span>
     </button>
   );
 }

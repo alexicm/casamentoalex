@@ -1,41 +1,42 @@
 "use client";
 
 import { CalendarPlus, MapPin } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { SplitScale } from "@/components/motion/SplitScale";
 import type { PublicEvent } from "@/lib/event/defaults";
-import { gsap, registerGsap, useGSAP } from "@/lib/gsap/register";
+import { publicLocationLine } from "@/lib/event/defaults";
 
 type EventDetailsProps = {
   event: PublicEvent;
 };
 
-function daysUntil(eventDate: string, startsAtLocal: string) {
+function remainingParts(eventDate: string, startsAtLocal: string) {
   const target = new Date(`${eventDate}T${startsAtLocal}:00-03:00`);
   const diff = target.getTime() - Date.now();
-  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  if (diff <= 0) return null;
+  const totalMinutes = Math.floor(diff / 60000);
+  return {
+    days: Math.floor(totalMinutes / (60 * 24)),
+    hours: Math.floor((totalMinutes % (60 * 24)) / 60),
+    minutes: totalMinutes % 60,
+  };
 }
 
 export function EventDetails({ event }: EventDetailsProps) {
-  const rootRef = useRef<HTMLElement>(null);
-  const [remaining] = useState(() => daysUntil(event.eventDate, event.startsAtLocal));
-  registerGsap();
-
-  useGSAP(
-    () => {
-      gsap.from(".detail-card", {
-        autoAlpha: 0,
-        y: 22,
-        duration: 0.7,
-        stagger: 0.1,
-        ease: "power2.out",
-        scrollTrigger: {
-          trigger: rootRef.current,
-          start: "top 80%",
-        },
-      });
-    },
-    { scope: rootRef },
+  const [open, setOpen] = useState(false);
+  const [parts, setParts] = useState(() =>
+    remainingParts(event.eventDate, event.startsAtLocal),
   );
+  const intervalRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    intervalRef.current = window.setInterval(() => {
+      setParts(remainingParts(event.eventDate, event.startsAtLocal));
+    }, 30000);
+    return () => {
+      if (intervalRef.current) window.clearInterval(intervalRef.current);
+    };
+  }, [event.eventDate, event.startsAtLocal]);
 
   const prettyDate = useMemo(
     () =>
@@ -50,28 +51,45 @@ export function EventDetails({ event }: EventDetailsProps) {
   );
 
   return (
-    <section id="grande-dia" ref={rootRef} className="px-5 py-16 sm:py-24">
+    <section id="grande-dia" className="px-5 py-16 sm:py-24">
       <div className="section-shell">
         <p className="eyebrow text-center">O grande dia</p>
-        <h2 className="mt-3 text-center font-serif text-3xl text-olive sm:text-4xl">
+        <SplitScale className="mt-3 text-center font-serif text-3xl text-burgundy sm:text-4xl">
           Nosso encontro está marcado
-        </h2>
+        </SplitScale>
 
-        <article className="detail-card mt-10 rounded-[28px] border border-olive/10 bg-paper-light/70 p-6 text-center shadow-[0_18px_40px_rgba(56,56,47,0.06)]">
+        <article className="paper-card mt-10 p-6 text-center">
           <p className="font-serif text-2xl capitalize text-ink">{prettyDate}</p>
           <p className="mt-2 text-sm tracking-[0.18em] text-olive uppercase">
             A partir das {event.startsAtLocal.replace(":00", "h")}
           </p>
           <div className="hairline my-6" />
-          <p className="font-serif text-2xl text-olive">{event.venueName}</p>
-          <p className="mt-2 text-sm leading-relaxed text-ink/75">
-            {event.venueAddress}
-          </p>
-          {remaining > 0 ? (
-            <p className="mt-5 text-xs tracking-[0.2em] text-sage uppercase">
-              Faltam {remaining} {remaining === 1 ? "dia" : "dias"}
+          <button
+            type="button"
+            className="focus-ring mx-auto block"
+            aria-expanded={open}
+            onClick={() => setOpen((value) => !value)}
+          >
+            <p className="font-serif text-2xl text-burgundy">{event.venueName}</p>
+            <p className="mt-2 text-sm leading-relaxed text-ink/75">
+              {publicLocationLine(event)}
+            </p>
+          </button>
+          {open ? (
+            <p className="mt-4 text-sm leading-relaxed text-ink/70">
+              O endereço completo será confirmado no painel antes da publicação
+              definitiva. Use o mapa para chegar ao BuGú Delícias, em Taguatinga.
             </p>
           ) : null}
+          {parts ? (
+            <p className="mt-5 text-xs tracking-[0.2em] text-taupe uppercase">
+              Faltam {parts.days}d {parts.hours}h {parts.minutes}min
+            </p>
+          ) : (
+            <p className="mt-5 text-xs tracking-[0.2em] text-olive uppercase">
+              O grande dia chegou
+            </p>
+          )}
         </article>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -79,14 +97,14 @@ export function EventDetails({ event }: EventDetailsProps) {
             href={event.mapsUrl}
             target="_blank"
             rel="noreferrer"
-            className="detail-card focus-ring ink-button flex min-h-12 items-center justify-center gap-2 rounded-full bg-olive px-5 text-sm tracking-[0.14em] text-paper-light uppercase"
+            className="ink-button focus-ring flex min-h-12 items-center justify-center gap-2 rounded-full bg-burgundy px-5 text-sm tracking-[0.14em] text-ivory uppercase"
           >
             <MapPin size={16} aria-hidden="true" />
             Como chegar
           </a>
           <a
             href="/api/calendar"
-            className="detail-card focus-ring flex min-h-12 items-center justify-center gap-2 rounded-full border border-olive/25 px-5 text-sm tracking-[0.14em] text-olive uppercase"
+            className="focus-ring flex min-h-12 items-center justify-center gap-2 rounded-full border border-line px-5 text-sm tracking-[0.14em] text-burgundy uppercase"
           >
             <CalendarPlus size={16} aria-hidden="true" />
             Adicionar ao calendário

@@ -1,0 +1,73 @@
+"use client";
+
+import Link from "next/link";
+import { CalendarAdd } from "@/components/wedding/CalendarAdd";
+import { MaskImage } from "@/components/motion/MaskImage";
+import { PageTransition } from "@/components/motion/PageTransition";
+import { PopParallax } from "@/components/motion/PopParallax";
+import { Foliage } from "@/components/wedding/Foliage";
+import { WEDDING_ASSETS } from "@/lib/event/defaults";
+
+type ThankYouSceneProps = {
+  attending: boolean;
+  validated: boolean;
+  found: boolean;
+};
+
+export function ThankYouScene({ attending, validated, found }: ThankYouSceneProps) {
+  const title = !found
+    ? "Obrigado por visitar o convite."
+    : attending
+      ? validated
+        ? "Presença confirmada!"
+        : "Resposta recebida!"
+      : "Vamos sentir sua falta.";
+
+  const body = !found
+    ? "Se você acabou de enviar uma resposta, ela já está conosco. Volte ao convite quando quiser reler os detalhes."
+    : attending
+      ? validated
+        ? "Que alegria ter você com a gente! Recebemos sua resposta com muito carinho. Ter você ao nosso lado vai tornar esse dia ainda mais especial."
+        : "Recebemos sua resposta com muito carinho. Vamos conferir os detalhes com carinho — isso ainda não é a confirmação final da lista."
+      : "Obrigado por nos contar. Você continua fazendo parte da nossa história.";
+
+  return (
+    <PageTransition>
+      <main className="paper-bg relative min-h-svh overflow-hidden px-5 py-16">
+        <PopParallax className="pointer-events-none absolute -left-8 top-10 w-40" weight={0.3}>
+          <Foliage />
+        </PopParallax>
+        <PopParallax className="pointer-events-none absolute -right-10 bottom-16 w-44" weight={0.7}>
+          <Foliage variant="spray" />
+        </PopParallax>
+        <div className="section-shell relative z-10 text-center">
+          <p className="eyebrow">Obrigado</p>
+          <h1 className="mt-4 font-serif text-4xl text-burgundy">{title}</h1>
+          <p className="mx-auto mt-5 max-w-md text-sm leading-relaxed text-ink/80">{body}</p>
+          {attending && found ? (
+            <div className="oval-frame mx-auto mt-10 w-[min(72vw,320px)] overflow-hidden bg-ivory p-2">
+              <MaskImage
+                src={WEDDING_ASSETS.dance}
+                alt="Alex e Paloma dançando em aquarela"
+                width={1086}
+                height={1448}
+                sizes="320px"
+              />
+            </div>
+          ) : null}
+          <p className="script-line mt-8 text-3xl text-burgundy">Com amor, Alex & Paloma</p>
+          <p className="mt-2 text-xs tracking-[0.24em] text-taupe uppercase">20.12.2026</p>
+          <div className="mt-8 flex flex-col gap-3">
+            <Link
+              href="/"
+              className="focus-ring mx-auto flex min-h-12 items-center justify-center rounded-full bg-burgundy px-6 text-sm tracking-[0.16em] text-ivory uppercase"
+            >
+              Voltar ao convite
+            </Link>
+            {attending && found ? <CalendarAdd className="mx-auto mt-2" /> : null}
+          </div>
+        </div>
+      </main>
+    </PageTransition>
+  );
+}

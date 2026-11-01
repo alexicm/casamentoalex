@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { PageReadyProvider } from "@/components/motion/PageReadyProvider";
+import { SmoothScroll } from "@/components/motion/SmoothScroll";
 import { DressCodeLookbook } from "@/components/wedding/DressCodeLookbook";
 import { EventDetails } from "@/components/wedding/EventDetails";
 import { FinalLetter } from "@/components/wedding/FinalLetter";
@@ -9,7 +11,7 @@ import { RSVPForm } from "@/components/wedding/RSVPForm";
 import { StickyConfirmBar } from "@/components/wedding/StickyConfirmBar";
 import { Story } from "@/components/wedding/Story";
 import type { PublicEvent } from "@/lib/event/defaults";
-import { gsap, registerGsap, ScrollToPlugin } from "@/lib/gsap/register";
+import { gsap, registerGsap, ScrollToPlugin } from "@/lib/gsap";
 
 type WeddingExperienceProps = {
   event: PublicEvent;
@@ -23,7 +25,6 @@ export function WeddingExperience({
   setupPending,
 }: WeddingExperienceProps) {
   const [formInView, setFormInView] = useState(false);
-  const [answered, setAnswered] = useState(false);
   registerGsap();
 
   useEffect(() => {
@@ -37,8 +38,6 @@ export function WeddingExperience({
     return () => observer.disconnect();
   }, []);
 
-  const markAnswered = useCallback(() => setAnswered(true), []);
-
   const scrollToRsvp = useCallback(() => {
     const target = document.getElementById("confirmar");
     if (!target) return;
@@ -47,16 +46,16 @@ export function WeddingExperience({
       target.scrollIntoView();
     } else {
       gsap.to(window, {
-        duration: 0.9,
+        duration: 1.15,
         scrollTo: { y: target, offsetY: 12 },
-        ease: "power2.out",
+        ease: "sine.inOut",
       });
     }
     window.setTimeout(() => {
       const heading = target.querySelector("h2");
       heading?.setAttribute("tabindex", "-1");
       (heading as HTMLElement | null)?.focus();
-    }, reduce ? 0 : 850);
+    }, reduce ? 0 : 1100);
   }, []);
 
   const scrollToDetails = useCallback(() => {
@@ -68,32 +67,31 @@ export function WeddingExperience({
       return;
     }
     gsap.to(window, {
-      duration: 0.8,
+      duration: 1.05,
       scrollTo: { y: target, offsetY: 8 },
-      ease: "power2.out",
+      ease: "sine.inOut",
     });
   }, []);
 
   void ScrollToPlugin;
 
   return (
-    <div className="paper-bg min-h-svh overflow-x-hidden">
-      <Hero onConfirm={scrollToRsvp} onDiscover={scrollToDetails} />
-      <Story />
-      <EventDetails event={event} />
-      <DressCodeLookbook event={event} />
-      <RSVPForm
-        inviteToken={inviteToken}
-        setupPending={setupPending}
-        onAnswered={markAnswered}
-      />
-      <FinalLetter onConfirm={scrollToRsvp} alreadyAnswered={answered} />
-      <footer className="px-5 pb-[max(2rem,env(safe-area-inset-bottom))] text-center">
-        <p className="text-xs tracking-[0.2em] text-sage uppercase">
-          Alex & Paloma · 20.12.2026 · BuGú Delícias, Taguatinga
-        </p>
-      </footer>
-      <StickyConfirmBar visible={!formInView && !answered} onConfirm={scrollToRsvp} />
-    </div>
+    <PageReadyProvider initialReady>
+      <SmoothScroll />
+      <div className="paper-bg min-h-svh overflow-x-clip">
+        <Hero onConfirm={scrollToRsvp} onDiscover={scrollToDetails} />
+        <Story />
+        <EventDetails event={event} />
+        <DressCodeLookbook event={event} />
+        <RSVPForm inviteToken={inviteToken} setupPending={setupPending} />
+        <FinalLetter onConfirm={scrollToRsvp} />
+        <footer className="burgundy-stage px-5 pb-[max(2rem,env(safe-area-inset-bottom))] pt-8 text-center">
+          <p className="text-xs tracking-[0.2em] text-ivory/65 uppercase">
+            20.12.2026 · Alex & Paloma
+          </p>
+        </footer>
+        <StickyConfirmBar visible={!formInView} onConfirm={scrollToRsvp} />
+      </div>
+    </PageReadyProvider>
   );
 }

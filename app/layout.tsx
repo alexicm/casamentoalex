@@ -42,11 +42,12 @@ export const metadata: Metadata = {
     images: ["/assets/wedding/save-the-date.jpg"],
   },
   robots: { index: false, follow: false },
+  referrer: "strict-origin-when-cross-origin",
   icons: { icon: "/icon.svg" },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#F4EFE6",
+  themeColor: "#4B1321",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",

@@ -55,7 +55,7 @@ export const ALEX_GUESTS: SeedGuest[] = [
   { seedKey: "alex-thaynara", groupOwner: "Alex", displayName: "Thaynara Rodrigues", officialStatus: "awaiting_response", confirmationSource: "import" },
   { seedKey: "alex-franciele", groupOwner: "Alex", displayName: "Franciele Rodrigues", officialStatus: "awaiting_response", confirmationSource: "import" },
   { seedKey: "alex-thanyele", groupOwner: "Alex", displayName: "Thanyele Rodrigues", officialStatus: "awaiting_response", confirmationSource: "import" },
-  { seedKey: "alex-victor", groupOwner: "Alex", displayName: "Victor", officialStatus: "awaiting_response", confirmationSource: "import" },
+  { seedKey: "alex-victor", groupOwner: "Alex", displayName: "Victor Luiz", officialStatus: "awaiting_response", confirmationSource: "import" },
   { seedKey: "alex-joao-miranda", groupOwner: "Alex", displayName: "João Miranda", officialStatus: "awaiting_response", confirmationSource: "import" },
   { seedKey: "alex-victoria", groupOwner: "Alex", displayName: "Victoria Silva", officialStatus: "awaiting_response", confirmationSource: "import" },
   { seedKey: "alex-ana-paula", groupOwner: "Alex", displayName: "Ana Paula", officialStatus: "awaiting_response", confirmationSource: "import" },

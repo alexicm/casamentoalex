@@ -8,23 +8,29 @@ export const DEFAULT_EVENT = {
   venueAddress:
     "Setor J Norte, QNJ 32, Lote 38, Taguatinga, Brasília, DF, CEP 72140-300",
   mapsUrl:
-    "https://www.google.com/maps/search/?api=1&query=BuG%C3%BA%20Del%C3%ADcias%20St.%20J%20Norte%20QNJ%2032%20Lote%2038%20Taguatinga%20Bras%C3%ADlia",
+    "https://www.google.com/maps/search/?api=1&query=BuG%C3%BA%20Del%C3%ADcias%20Taguatinga%20Bras%C3%ADlia",
   dressCode: {
-    title: "Coquetel elegante",
+    title: "Coquetel elegante de jardim",
     subtitle:
-      "Um visual bonito, leve e confortável para celebrar com a gente.",
-    palette: ["oliva", "sálvia", "terracota", "rosé", "vinho", "tons terrosos"],
+      "Um visual elegante, leve e confortável para celebrar com a gente.",
+    palette: ["vinho", "rosé", "terracota", "mostarda", "oliva", "sálvia", "lilás", "azul céu"],
     notes: [
       "Se possível, deixe o branco, off-white e marfim para a noiva.",
-      "Escolha um look em que você se sinta bem para aproveitar cada momento.",
+      "Prefira evitar o preto e looks muito casuais, como tênis, short ou boné.",
+      "O mais importante é que você se sinta bem para celebrar com a gente.",
     ],
   },
   rsvpDeadline: null as string | null,
   publicEnabled: true,
   calendarDurationHours: 6,
+  addressVerified: false,
 };
 
 export type PublicEvent = typeof DEFAULT_EVENT;
+
+export function publicLocationLine(event: PublicEvent) {
+  return `${event.venueName}, Taguatinga, Brasília/DF`;
+}
 
 export const WEDDING_ASSETS = {
   embrace: "/assets/wedding/couple-embrace.jpg",
