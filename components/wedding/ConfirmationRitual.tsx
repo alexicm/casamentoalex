@@ -24,9 +24,9 @@ type ConfirmationRitualProps = {
 };
 
 const SEAT_CHOICES = [
-  { id: "dance", label: "Perto da pista", note: "Para dançar com vocês." },
-  { id: "people", label: "Perto de quem amo", note: "Quero estar entre os meus." },
-  { id: "talk", label: "Um canto para conversar", note: "Um lugar calmo, bem perto." },
+  { id: "dance", label: "Perto da pista", note: "Para dançar e celebrar com vocês." },
+  { id: "people", label: "Perto de quem eu amo", note: "Quero estar entre os meus." },
+  { id: "talk", label: "Um canto para conversar", note: "Boas conversas, abraços demorados." },
 ] as const;
 
 const ABSENCE_CHOICES = [
@@ -205,7 +205,7 @@ export function ConfirmationRitual({ receipt, attending }: ConfirmationRitualPro
   const name = state.firstName === "você" ? "você" : state.firstName;
   const steps = state.attending
     ? PROCESS_STEPS
-    : (["A carta chegou", "Lendo com calma", "Um lugar no coração", "Um desejo", "Selando a resposta"] as const);
+        : (["A carta chegou", "Lendo com calma", "Um lugar no coração", "Um desejo", "Selando a resposta"] as const);
 
   return (
     <main
@@ -366,7 +366,7 @@ function StageBody({
         </h2>
         <p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-ink/75">
           {attending
-            ? "Ainda não é a lista final. É o jeito que você imagina estar nesse dia."
+            ? "Ainda não é a lista final. É o jeito que você imagina estar nesse encontro."
             : "Mesmo de longe, você continua fazendo parte da história."}
         </p>
         <div className="mt-6 grid gap-2">
@@ -400,7 +400,7 @@ function StageBody({
       <div className="mt-5 text-center">
         <h2 className="font-serif text-2xl text-burgundy">Um desejo para o dia</h2>
         <p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-ink/75">
-          Escolha um recado. Ele fica neste rito, com vocês.
+          Escolha um recado. Ele fica neste encontro, com a gente.
         </p>
         <div className="mt-6 grid gap-2">
           {WISHES.map((wish) => (
@@ -424,10 +424,10 @@ function StageBody({
 
   return (
     <div className="mt-5 text-center">
-      <h2 className="font-serif text-2xl text-burgundy">Selando a resposta</h2>
-      <p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-ink/75">
-        Segure o lacre até ele aquecer. Depois disso, o comprovante se abre.
-      </p>
+        <h2 className="font-serif text-2xl text-burgundy">Selando a resposta</h2>
+        <p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-ink/75">
+          Segure o lacre até ele aquecer. Depois disso, a carta se abre.
+        </p>
       <button
         type="button"
         onPointerDown={onHoldStart}

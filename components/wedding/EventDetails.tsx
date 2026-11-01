@@ -53,9 +53,9 @@ export function EventDetails({ event }: EventDetailsProps) {
   return (
     <section id="grande-dia" className="px-5 py-16 sm:py-24">
       <div className="section-shell">
-        <p className="eyebrow text-center">O grande dia</p>
+        <p className="eyebrow text-center">O encontro</p>
         <SplitScale className="mt-3 text-center font-serif text-3xl text-burgundy sm:text-4xl">
-          Nosso encontro está marcado
+          No dia 20 de dezembro
         </SplitScale>
 
         <article className="paper-card mt-10 p-6 text-center">
@@ -77,8 +77,8 @@ export function EventDetails({ event }: EventDetailsProps) {
           </button>
           {open ? (
             <p className="mt-4 text-sm leading-relaxed text-ink/70">
-              O endereço completo será confirmado no painel antes da publicação
-              definitiva. Use o mapa para chegar ao BuGú Delícias, em Taguatinga.
+              O endereço completo fica com quem estará conosco. Use o mapa para
+              chegar ao BuGú Delícias, em Taguatinga.
             </p>
           ) : null}
           {parts ? (
@@ -87,7 +87,7 @@ export function EventDetails({ event }: EventDetailsProps) {
             </p>
           ) : (
             <p className="mt-5 text-xs tracking-[0.2em] text-olive uppercase">
-              O grande dia chegou
+              O encontro chegou
             </p>
           )}
         </article>

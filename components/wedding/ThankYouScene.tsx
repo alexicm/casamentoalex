@@ -19,16 +19,16 @@ export function ThankYouScene({ attending, validated, found }: ThankYouSceneProp
     ? "Obrigado por visitar o convite."
     : attending
       ? validated
-        ? "Presença confirmada!"
-        : "Resposta recebida!"
+        ? "Que alegria ter você com a gente."
+        : "Resposta recebida."
       : "Vamos sentir sua falta.";
 
   const body = !found
-    ? "Se você acabou de enviar uma resposta, ela já está conosco. Volte ao convite quando quiser reler os detalhes."
+    ? "Se você acabou de enviar uma resposta, ela já está conosco. Volte ao convite quando quiser reler os detalhes do encontro."
     : attending
       ? validated
-        ? "Que alegria ter você com a gente! Recebemos sua resposta com muito carinho. Ter você ao nosso lado vai tornar esse dia ainda mais especial."
-        : "Recebemos sua resposta com muito carinho. Vamos conferir os detalhes com carinho — isso ainda não é a confirmação final da lista."
+        ? "Recebemos sua resposta com muito carinho. Queremos vocês perto — não apenas para assistir à nossa celebração, mas para fazer parte dela."
+        : "Recebemos sua resposta com muito carinho. Vamos conferir os detalhes — isso ainda não é a confirmação final da lista."
       : "Obrigado por nos contar. Você continua fazendo parte da nossa história.";
 
   return (

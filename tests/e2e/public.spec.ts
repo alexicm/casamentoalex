@@ -7,7 +7,7 @@ test("hero e RSVP funcionam no mobile após o envelope", async ({ page }) => {
   await expect(page.getByRole("heading", { name: /Alex/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /Confirmar minha presença/i })).toBeVisible();
   await page.getByRole("button", { name: /Confirmar minha presença/i }).first().click();
-  await expect(page.getByRole("heading", { name: /Só falta você confirmar/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Confirma sua presença/i })).toBeVisible();
   await page.getByRole("button", { name: /Sim, estarei presente/i }).click();
   await page.getByLabel(/nome completo/i).fill("Alex Rodrigues");
   await page.getByText(/Autorizo o uso do meu nome/).click();
@@ -30,7 +30,7 @@ test("hero e RSVP funcionam no mobile após o envelope", async ({ page }) => {
 test("conteúdo permanece visível com reduced motion", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  await expect(page.getByText("Nossa história fica ainda mais bonita com você.")).toBeVisible();
+  await expect(page.getByText("Mais do que um casamento, um encontro.")).toBeVisible();
   await expect(page.getByRole("link", { name: /Como chegar/i })).toBeVisible();
 });
 

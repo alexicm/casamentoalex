@@ -100,11 +100,11 @@ export function RSVPForm({ inviteToken, setupPending }: RSVPFormProps) {
           Confirmação
         </p>
         <h2 className="mt-3 text-center font-serif text-3xl text-burgundy sm:text-4xl">
-          Só falta você confirmar
+          Confirma sua presença
         </h2>
         <p className="mx-auto mt-4 max-w-md text-center text-[0.98rem] leading-relaxed text-ink/80">
-          Estamos preparando tudo com muito carinho. Para organizar cada
-          detalhe, conta pra gente: podemos esperar por você?
+          Queremos vocês perto. Confirma aí — e venha com o coração aberto,
+          boas histórias e vontade de celebrar.
         </p>
 
         {setupPending ? (
@@ -120,7 +120,7 @@ export function RSVPForm({ inviteToken, setupPending }: RSVPFormProps) {
             selected={attending === true}
             onSelect={() => setAttending(true)}
             title="Sim, estarei presente"
-            note="Pode contar comigo nesse dia."
+            note="Quero fazer parte desse encontro."
           />
           <Choice
             selected={attending === false}
@@ -182,7 +182,7 @@ export function RSVPForm({ inviteToken, setupPending }: RSVPFormProps) {
             required
           />
           Autorizo o uso do meu nome e contato apenas para organização deste
-          casamento.
+          encontro.
         </label>
 
         {status.kind === "error" ? (
@@ -198,6 +198,9 @@ export function RSVPForm({ inviteToken, setupPending }: RSVPFormProps) {
         >
           {status.kind === "loading" ? "Enviando..." : "Enviar minha resposta"}
         </button>
+        <p className="mx-auto mt-5 max-w-md text-center text-sm leading-relaxed text-ink/65">
+          O resto a gente constrói junto.
+        </p>
       </form>
     </section>
   );

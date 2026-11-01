@@ -52,7 +52,7 @@ export function buildIcs(event: PublicEvent = DEFAULT_EVENT): string {
     `DURATION:PT${durationHours}H`,
     "SUMMARY:Casamento Alex & Paloma",
     `LOCATION:${event.venueName}\\, ${event.venueAddress}`,
-    "DESCRIPTION:Celebração de Alex e Paloma a partir das 17h. A duração neste arquivo é técnica e pode ser ajustada no seu calendário. Não há horário de encerramento oficial divulgado.",
+    "DESCRIPTION:Encontro de Alex e Paloma a partir das 17h. Mais do que um casamento, um encontro. A duração neste arquivo é técnica e pode ser ajustada no seu calendário. Não há horário de encerramento oficial divulgado.",
     "END:VEVENT",
     "END:VCALENDAR",
   ];

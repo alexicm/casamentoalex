@@ -68,7 +68,7 @@ export function Hero({ onConfirm, onDiscover }: HeroProps) {
       </PopParallax>
 
       <div className="section-shell relative z-10 flex min-h-[calc(100svh-2rem)] flex-col items-center justify-center text-center">
-        <p className="hero-copy eyebrow mb-3">Um dia para guardar na memória</p>
+        <p className="hero-copy eyebrow mb-3">Um encontro</p>
         <h1 className="hero-name display-title text-[clamp(2.6rem,11vw,4.8rem)] text-burgundy">
           Alex
           <span className="mx-2 inline-block font-script text-[0.55em] normal-case tracking-normal text-terracotta">
@@ -84,19 +84,19 @@ export function Hero({ onConfirm, onDiscover }: HeroProps) {
       </div>
 
       <div className="section-shell relative z-10 flex flex-col items-center text-center">
-        <p className="hero-copy mt-7 max-w-[22rem] font-serif text-2xl leading-snug text-ink sm:text-[1.7rem]">
-          Nossa história fica ainda mais bonita com você.
+        <p className="hero-copy mt-7 max-w-[24rem] font-serif text-2xl leading-snug text-ink sm:text-[1.7rem]">
+          Mais do que um casamento, um encontro.
         </p>
         <p className="hero-copy mt-3 max-w-[28rem] text-[0.98rem] leading-relaxed text-ink/80">
-          No dia 20 de dezembro, vamos celebrar o amor ao lado de pessoas que
-          fazem parte da nossa história. Você é uma delas, e queremos muito ter
-          você por perto.
+          Não queremos reunir pessoas para testemunhar um casamento. Queremos
+          reunir as pessoas que amam para celebrar uma história que já estamos
+          vivendo. Vocês fazem parte disso!
         </p>
 
         <div className="hero-copy mt-7 flex w-full max-w-sm flex-col gap-3">
           <BounceButton onClick={onConfirm}>Confirmar minha presença</BounceButton>
           <BounceButton variant="ghost" onClick={onDiscover}>
-            Descobrir o grande dia
+            Descobrir o encontro
           </BounceButton>
         </div>
       </div>

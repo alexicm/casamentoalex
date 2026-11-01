@@ -60,7 +60,7 @@ const STYLES: {
     id: "free",
     label: "Outras inspirações",
     title: "Do seu jeito mais especial",
-    body: "A paleta é um convite, não uma regra. O importante é um look bonito, fresco e em que você se sinta bem.",
+    body: "Vale apostar em tecidos naturais, peças sofisticadas sem excessos, estampas delicadas e produções que combinem elegância e descontração.",
     plates: [
       {
         src: "/assets/wedding/lookbook/looks-inspiracao.jpg",
@@ -74,23 +74,23 @@ const STYLES: {
 const DETAILS = [
   {
     id: "tecidos",
-    title: "Tecidos leves",
-    body: "Linhos, crepes e sedas leves funcionam melhor para o fim de tarde em Brasília.",
+    title: "Roupas leves",
+    body: "Prefira roupas leves, fluidas e confortáveis, adequadas para um final de tarde de celebração.",
   },
   {
-    id: "calcados",
-    title: "Calçados confortáveis",
-    body: "Prefira sapatos em que você consiga ficar o tempo todo em pé e dançar.",
-  },
-  {
-    id: "cores",
-    title: "Cores recomendadas",
-    body: "Inspire-se na paleta: vinho, rosé, terracota, mostarda, oliva, sálvia, lilás e azul céu.",
+    id: "estampas",
+    title: "Estampas e cores",
+    body: "Estampas delicadas e cores suaves são muito bem-vindas.",
   },
   {
     id: "evitar",
     title: "O que evitar",
-    body: "Deixe o branco, off-white e marfim para a noiva. Prefira evitar o preto e looks muito casuais, como tênis, short ou boné.",
+    body: "Evite o uso de preto e branco.",
+  },
+  {
+    id: "leveza",
+    title: "Elegância com leveza",
+    body: "Escolha uma produção elegante, mas sem perder a leveza da ocasião.",
   },
 ];
 
@@ -125,11 +125,13 @@ export function DressCodeLookbook({ event }: DressCodeLookbookProps) {
       <div className="mx-auto w-[min(920px,calc(100%-0.25rem))]">
         <p className="eyebrow text-center">Dress code</p>
         <SplitScale className="mt-3 text-center font-serif text-3xl text-burgundy sm:text-4xl">
-          Venha do seu jeito mais especial
+          Coquetel elegante
         </SplitScale>
         <p className="mx-auto mt-4 max-w-md text-center text-[0.98rem] leading-relaxed text-ink/80">
-          Sugerimos um visual elegante, leve e confortável para celebrar com a
-          gente. Nome visual provisório: {event.dressCode.title}.
+          Queremos um encontro bonito, elegante e, acima de tudo, confortável.
+          A proposta é um {event.dressCode.title.trim().toLowerCase()}, com
+          roupas leves, fluidas e adequadas para um final de tarde de
+          celebração.
         </p>
 
         <div
@@ -193,9 +195,10 @@ export function DressCodeLookbook({ event }: DressCodeLookbookProps) {
                 <p className="text-[0.68rem] tracking-[0.2em] text-olive uppercase">
                   Paleta de inspiração
                 </p>
-                <p className="mt-2 font-serif text-xl text-burgundy">Cores que enchem de vida</p>
+                <p className="mt-2 font-serif text-xl text-burgundy">Cores suaves</p>
                 <p className="mt-2 text-sm leading-relaxed text-ink/75">
-                  Você pode se inspirar nesta paleta ou em tons que conversem com o jardim.
+                  Estampas delicadas e cores suaves são muito bem-vindas. Você
+                  também pode se inspirar em tons que conversem com o jardim.
                 </p>
               </div>
               <div className="rounded-2xl border border-line bg-ivory/80 px-4 py-4">
@@ -203,9 +206,9 @@ export function DressCodeLookbook({ event }: DressCodeLookbookProps) {
                   Tenha em conta
                 </p>
                 <ul className="mt-3 space-y-2 text-sm leading-relaxed text-ink/75">
-                  <li>O branco, o marfim e o off-white ficam com a noiva.</li>
-                  <li>Prefira evitar o preto.</li>
-                  <li>Evite looks muito casuais, como tênis, short ou boné.</li>
+                  <li>Evite o uso de preto e branco.</li>
+                  <li>Prefira roupas leves, fluidas e confortáveis.</li>
+                  <li>Escolha uma produção elegante, sem perder a leveza.</li>
                 </ul>
               </div>
             </div>
@@ -265,7 +268,8 @@ export function DressCodeLookbook({ event }: DressCodeLookbookProps) {
           })}
         </div>
         <p className="mt-6 text-center text-sm text-olive">
-          O mais importante é que você se sinta bem para celebrar com a gente.
+          A ideia é que todos se sintam bonitos, à vontade e prontos para
+          aproveitar cada momento.
         </p>
       </div>
     </section>

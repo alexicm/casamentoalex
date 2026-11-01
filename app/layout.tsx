@@ -25,13 +25,13 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: "Alex & Paloma · 20.12.2026",
   description:
-    "Você faz parte da nossa história. Confirme presença no casamento de Alex e Paloma, no dia 20 de dezembro de 2026.",
+    "Mais do que um casamento, um encontro. Confirme presença no casamento de Alex e Paloma, 20.12.2026.",
   applicationName: "Alex & Paloma",
   authors: [{ name: "Alex & Paloma" }],
   openGraph: {
     title: "Alex & Paloma · 20.12.2026",
     description:
-      "Um convite para celebrar com a gente em Brasília, a partir das 17h.",
+      "Mais do que um casamento, um encontro. 20.12.2026, Brasília, a partir das 17h.",
     locale: "pt_BR",
     type: "website",
     images: [{ url: "/assets/wedding/save-the-date.jpg" }],

@@ -224,7 +224,7 @@ export async function POST(request: Request) {
   return NextResponse.json({
     message: validated
       ? input.attending
-        ? "Presença confirmada! Estamos muito felizes em dividir esse dia com você."
+        ? "Que alegria ter você com a gente."
         : "Vamos sentir sua falta, mas agradecemos por nos avisar."
       : "Recebemos sua resposta com carinho. Obrigado por nos contar!",
     validated,

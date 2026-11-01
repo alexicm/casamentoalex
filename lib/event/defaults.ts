@@ -10,14 +10,14 @@ export const DEFAULT_EVENT = {
   mapsUrl:
     "https://www.google.com/maps/search/?api=1&query=BuG%C3%BA%20Del%C3%ADcias%20Taguatinga%20Bras%C3%ADlia",
   dressCode: {
-    title: "Coquetel elegante de jardim",
+    title: "Coquetel elegante",
     subtitle:
-      "Um visual elegante, leve e confortável para celebrar com a gente.",
+      "Queremos um encontro bonito, elegante e, acima de tudo, confortável.",
     palette: ["vinho", "rosé", "terracota", "mostarda", "oliva", "sálvia", "lilás", "azul céu"],
     notes: [
-      "Se possível, deixe o branco, off-white e marfim para a noiva.",
-      "Prefira evitar o preto e looks muito casuais, como tênis, short ou boné.",
-      "O mais importante é que você se sinta bem para celebrar com a gente.",
+      "Prefira roupas leves, fluidas e confortáveis.",
+      "Estampas delicadas e cores suaves são muito bem-vindas.",
+      "Evite o uso de preto e branco.",
     ],
   },
   rsvpDeadline: null as string | null,

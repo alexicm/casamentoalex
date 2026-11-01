@@ -8,6 +8,8 @@ import { EventDetails } from "@/components/wedding/EventDetails";
 import { FinalLetter } from "@/components/wedding/FinalLetter";
 import { Hero } from "@/components/wedding/Hero";
 import { RSVPForm } from "@/components/wedding/RSVPForm";
+import { GuestWitnesses } from "@/components/wedding/GuestWitnesses";
+import { SharedStories } from "@/components/wedding/SharedStories";
 import { StickyConfirmBar } from "@/components/wedding/StickyConfirmBar";
 import { Story } from "@/components/wedding/Story";
 import type { PublicEvent } from "@/lib/event/defaults";
@@ -81,6 +83,8 @@ export function WeddingExperience({
       <div className="paper-bg min-h-svh overflow-x-clip">
         <Hero onConfirm={scrollToRsvp} onDiscover={scrollToDetails} />
         <Story />
+        <SharedStories />
+        <GuestWitnesses />
         <EventDetails event={event} />
         <DressCodeLookbook event={event} />
         <RSVPForm inviteToken={inviteToken} setupPending={setupPending} />
