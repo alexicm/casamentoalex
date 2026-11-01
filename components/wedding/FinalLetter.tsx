@@ -1,7 +1,7 @@
 "use client";
 
+import Image from "next/image";
 import { BounceButton } from "@/components/motion/BounceButton";
-import { MaskImage } from "@/components/motion/MaskImage";
 import { WEDDING_ASSETS } from "@/lib/event/defaults";
 
 type FinalLetterProps = {
@@ -12,13 +12,14 @@ export function FinalLetter({ onConfirm }: FinalLetterProps) {
   return (
     <section className="burgundy-stage relative px-5 pb-32 pt-16 sm:pb-24">
       <div className="section-shell text-center">
-        <div className="mx-auto w-[min(70vw,260px)] overflow-hidden rounded-[40%] bg-ivory/10 p-2">
-          <MaskImage
-            src={WEDDING_ASSETS.embrace}
-            alt="Alex e Paloma em aquarela, um último olhar carinhoso"
-            width={1086}
-            height={1448}
-            sizes="260px"
+        <div className="mx-auto w-[min(88vw,420px)]">
+          <Image
+            src={WEDDING_ASSETS.family}
+            alt="Retrato em aquarela da família, em moldura de madeira"
+            width={1024}
+            height={576}
+            sizes="(max-width: 430px) 88vw, 420px"
+            className="h-auto w-full"
           />
         </div>
         <p className="script-line mt-6 text-3xl text-ivory">Com amor</p>
