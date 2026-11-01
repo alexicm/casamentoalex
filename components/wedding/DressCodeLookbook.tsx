@@ -63,9 +63,9 @@ const STYLES: {
     body: "A paleta é um convite, não uma regra. O importante é um look bonito, fresco e em que você se sinta bem.",
     plates: [
       {
-        src: "/assets/wedding/lookbook/paleta-e-composicao.jpg",
-        alt: "Lookbook com vestidos florais e sólidos ao lado de camisas e alfaiataria clara, com paleta de inspiração",
-        caption: "Paleta e composição",
+        src: "/assets/wedding/lookbook/looks-inspiracao.jpg",
+        alt: "Lookbook com vestidos florais e sólidos ao lado de camisas e alfaiataria clara",
+        caption: "Looks de inspiração",
       },
     ],
   },
@@ -187,10 +187,33 @@ export function DressCodeLookbook({ event }: DressCodeLookbookProps) {
               </figure>
             ))}
           </div>
+          {current.id === "free" ? (
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <div className="rounded-2xl border border-line bg-ivory/80 px-4 py-4">
+                <p className="text-[0.68rem] tracking-[0.2em] text-olive uppercase">
+                  Paleta de inspiração
+                </p>
+                <p className="mt-2 font-serif text-xl text-burgundy">Cores que enchem de vida</p>
+                <p className="mt-2 text-sm leading-relaxed text-ink/75">
+                  Você pode se inspirar nesta paleta ou em tons que conversem com o jardim.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-line bg-ivory/80 px-4 py-4">
+                <p className="text-[0.68rem] tracking-[0.2em] text-olive uppercase">
+                  Tenha em conta
+                </p>
+                <ul className="mt-3 space-y-2 text-sm leading-relaxed text-ink/75">
+                  <li>O branco, o marfim e o off-white ficam com a noiva.</li>
+                  <li>Prefira evitar o preto.</li>
+                  <li>Evite looks muito casuais, como tênis, short ou boné.</li>
+                </ul>
+              </div>
+            </div>
+          ) : null}
           <div className="mt-5 text-center">
             <h3 className="font-serif text-2xl text-burgundy">{current.title}</h3>
             <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-ink/80">
-              {current.body} {color.hint}
+              {current.body}
             </p>
           </div>
         </div>
@@ -218,6 +241,7 @@ export function DressCodeLookbook({ event }: DressCodeLookbookProps) {
             );
           })}
         </div>
+        <p className="mt-3 text-center text-sm text-ink/65">{color.hint}</p>
 
         <div className="mx-auto mt-8 grid max-w-xl gap-2">
           {DETAILS.map((item) => {
