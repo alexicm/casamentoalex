@@ -1,6 +1,6 @@
 "use client";
 
-import { MaskImage } from "@/components/motion/MaskImage";
+import Image from "next/image";
 import { PopParallax } from "@/components/motion/PopParallax";
 import { SoftReveal } from "@/components/motion/SoftReveal";
 import { SplitScale } from "@/components/motion/SplitScale";
@@ -32,13 +32,14 @@ export function Story() {
             </p>
           </div>
         </SoftReveal>
-        <div className="oval-frame mx-auto mt-10 w-[min(78vw,360px)] overflow-hidden bg-ivory p-2">
-          <MaskImage
+        <div className="mx-auto mt-10 w-[min(86vw,420px)]">
+          <Image
             src={WEDDING_ASSETS.dance}
-            alt="Ilustração em aquarela de Alex e Paloma dançando em um campo florido"
-            width={1086}
-            height={1448}
-            sizes="(max-width: 430px) 78vw, 360px"
+            alt="Ilustração em aquarela de Alex e Paloma dançando em um campo florido, em moldura dourada"
+            width={736}
+            height={736}
+            sizes="(max-width: 430px) 86vw, 420px"
+            className="h-auto w-full"
           />
         </div>
         <p className="eyebrow mt-12">A lista</p>

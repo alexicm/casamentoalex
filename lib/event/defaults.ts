@@ -34,6 +34,6 @@ export function publicLocationLine(event: PublicEvent) {
 
 export const WEDDING_ASSETS = {
   embrace: "/assets/wedding/couple-embrace.jpg",
-  dance: "/assets/wedding/couple-dance.jpg",
+  dance: "/assets/wedding/couple-dance.png",
   saveTheDate: "/assets/wedding/save-the-date.jpg",
 } as const;

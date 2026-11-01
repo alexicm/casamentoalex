@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { CalendarAdd } from "@/components/wedding/CalendarAdd";
-import { MaskImage } from "@/components/motion/MaskImage";
 import { PageTransition } from "@/components/motion/PageTransition";
 import { PopParallax } from "@/components/motion/PopParallax";
 import { Foliage } from "@/components/wedding/Foliage";
@@ -45,13 +45,14 @@ export function ThankYouScene({ attending, validated, found }: ThankYouSceneProp
           <h1 className="mt-4 font-serif text-4xl text-burgundy">{title}</h1>
           <p className="mx-auto mt-5 max-w-md text-sm leading-relaxed text-ink/80">{body}</p>
           {attending && found ? (
-            <div className="oval-frame mx-auto mt-10 w-[min(72vw,320px)] overflow-hidden bg-ivory p-2">
-              <MaskImage
+            <div className="mx-auto mt-10 w-[min(80vw,360px)]">
+              <Image
                 src={WEDDING_ASSETS.dance}
-                alt="Alex e Paloma dançando em aquarela"
-                width={1086}
-                height={1448}
-                sizes="320px"
+                alt="Alex e Paloma dançando em aquarela, em moldura dourada"
+                width={736}
+                height={736}
+                sizes="360px"
+                className="h-auto w-full"
               />
             </div>
           ) : null}
