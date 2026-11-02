@@ -1,17 +1,24 @@
-import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/auth/admin";
 import { DEFAULT_EVENT } from "@/lib/event/defaults";
+import { computeGuestStats, mergeLocalGuestList, toAdminGuest } from "@/lib/rsvp/admin-view";
 import { toCsv } from "@/lib/rsvp/csv";
+import { canUseLocalRsvp, listLocalRsvps } from "@/lib/rsvp/local-store";
+import { companionLabel } from "@/lib/rsvp/seats";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 export async function GET() {
-  if (!isSupabaseConfigured()) {
-    return NextResponse.json({ message: "Setup pendente." }, { status: 503 });
-  }
   const admin = await getAdminUser();
   if (!admin) {
-    return NextResponse.json({ message: "Não autorizado." }, { status: 401 });
+    return Response.json({ message: "Não autorizado." }, { status: 401 });
+  }
+
+  if (!isSupabaseConfigured()) {
+    if (!canUseLocalRsvp()) {
+      return Response.json({ message: "Setup pendente." }, { status: 503 });
+    }
+    const guests = mergeLocalGuestList(await listLocalRsvps());
+    return csvResponse(guests);
   }
 
   const service = createServiceClient();
@@ -23,23 +30,65 @@ export async function GET() {
   const { data: guests } = await service
     .from("guests")
     .select(
-      "display_name, group_owner, official_status, confirmation_source, preferred_contact, notes, updated_at",
+      "id, display_name, group_owner, official_status, confirmation_source, preferred_contact, notes, updated_at, seed_key, bringing_companion, companion_name, companion_is_child",
     )
     .eq("event_id", event?.id)
     .is("deleted_at", null)
     .order("group_owner")
     .order("display_name");
 
+  return csvResponse(
+    (guests ?? []).map((guest) =>
+      toAdminGuest({
+        id: String(guest.id),
+        display_name: String(guest.display_name ?? ""),
+        group_owner: guest.group_owner as "Alex" | "Paloma",
+        official_status: String(guest.official_status ?? ""),
+        confirmation_source: String(guest.confirmation_source ?? ""),
+        preferred_contact: (guest.preferred_contact as string | null) ?? null,
+        notes: (guest.notes as string | null) ?? null,
+        updated_at: String(guest.updated_at ?? ""),
+        seed_key: (guest.seed_key as string | null) ?? null,
+        bringing_companion: Boolean(guest.bringing_companion),
+        companion_name: (guest.companion_name as string | null) ?? null,
+        companion_is_child: Boolean(guest.companion_is_child),
+      }),
+    ),
+  );
+}
+
+function csvResponse(guests: ReturnType<typeof toAdminGuest>[]) {
+  const stats = computeGuestStats(guests);
   const csv = toCsv(
-    ["Nome", "Lista", "Status", "Origem", "Contato", "Observacoes", "Atualizado em"],
-    (guests ?? []).map((guest) => [
-      String(guest.display_name ?? ""),
-      String(guest.group_owner ?? ""),
-      String(guest.official_status ?? ""),
-      String(guest.confirmation_source ?? ""),
-      String(guest.preferred_contact ?? ""),
-      String(guest.notes ?? ""),
-      String(guest.updated_at ?? ""),
+    [
+      "Nome",
+      "Lista",
+      "Status",
+      "Origem",
+      "Acompanhante",
+      "Acompanhante e crianca",
+      "Contato",
+      "Observacoes",
+      "Atualizado em",
+      "Lugares totais",
+    ],
+    guests.map((guest, index) => [
+      guest.display_name,
+      guest.group_owner,
+      guest.official_status,
+      guest.confirmation_source,
+      companionLabel({
+        officialStatus: guest.official_status,
+        confirmationSource: guest.confirmation_source,
+        bringingCompanion: guest.bringing_companion,
+        companionName: guest.companion_name,
+        companionIsChild: guest.companion_is_child,
+      }),
+      guest.companion_is_child ? "sim" : "nao",
+      guest.preferred_contact ?? "",
+      guest.notes ?? "",
+      guest.updated_at,
+      index === 0 ? String(stats.seats) : "",
     ]),
   );
 

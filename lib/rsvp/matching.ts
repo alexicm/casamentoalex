@@ -60,3 +60,27 @@ export function suggestMatches(
 
   return { state: "unmatched", candidates: [], reason: "no-match" };
 }
+
+export const RESPONDED_STATUSES = new Set([
+  "manually_confirmed",
+  "confirmed_via_token",
+  "declined",
+]);
+
+export function resolveListedGuest(
+  submittedName: string,
+  guests: MatchableGuest[],
+): { ok: true; guest: MatchableGuest } | { ok: false; code: "unmatched" | "ambiguous" } {
+  const match = suggestMatches(submittedName, guests);
+  if (match.state === "suggested" && match.candidates[0]) {
+    return { ok: true, guest: match.candidates[0] };
+  }
+  if (match.state === "ambiguous") {
+    return { ok: false, code: "ambiguous" };
+  }
+  return { ok: false, code: "unmatched" };
+}
+
+export function companionCounts(bringing: boolean, isChild: boolean) {
+  return bringing && !isChild;
+}

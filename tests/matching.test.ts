@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { PALOMA_GUESTS } from "@/lib/rsvp/guest-seed";
-import { suggestMatches } from "@/lib/rsvp/matching";
+import { companionCounts, resolveListedGuest, suggestMatches } from "@/lib/rsvp/matching";
 import { normalizeName } from "@/lib/rsvp/normalize";
+import { companionLabel, guestSeatCount } from "@/lib/rsvp/seats";
 
 const guests = PALOMA_GUESTS.map((guest, index) => ({
   id: `${index}`,
@@ -33,5 +34,42 @@ describe("sugestão interna de nomes", () => {
   it("marca nomes desconhecidos como unmatched", () => {
     const result = suggestMatches("Pessoa Inexistente", guests);
     expect(result.state).toBe("unmatched");
+  });
+
+  it("só aceita nomes únicos da lista", () => {
+    expect(resolveListedGuest("Heloísa", guests).ok).toBe(true);
+    expect(resolveListedGuest("Carolina", guests)).toEqual({ ok: false, code: "ambiguous" });
+    expect(resolveListedGuest("Pessoa Inexistente", guests)).toEqual({
+      ok: false,
+      code: "unmatched",
+    });
+  });
+
+  it("não conta criança até 10 anos como lugar extra", () => {
+    expect(companionCounts(true, true)).toBe(false);
+    expect(companionCounts(true, false)).toBe(true);
+    expect(companionCounts(false, false)).toBe(false);
+    expect(
+      guestSeatCount({
+        officialStatus: "confirmed_via_token",
+        bringingCompanion: true,
+        companionIsChild: true,
+      }),
+    ).toBe(1);
+    expect(
+      guestSeatCount({
+        officialStatus: "confirmed_via_token",
+        bringingCompanion: true,
+        companionIsChild: false,
+      }),
+    ).toBe(2);
+    expect(
+      companionLabel({
+        officialStatus: "confirmed_via_token",
+        bringingCompanion: true,
+        companionName: "Lia",
+        companionIsChild: true,
+      }),
+    ).toContain("não conta");
   });
 });

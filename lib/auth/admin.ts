@@ -1,8 +1,19 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { hasAdminCodeSession } from "@/lib/auth/admin-code";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
-export async function getAdminUser() {
+export type AdminSession = {
+  id: string | null;
+  role: "admin";
+  via: "code" | "supabase";
+};
+
+export async function getAdminUser(): Promise<AdminSession | null> {
+  if (await hasAdminCodeSession()) {
+    return { id: null, role: "admin", via: "code" };
+  }
+
   if (!isSupabaseConfigured()) return null;
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase.auth.getClaims();
@@ -16,7 +27,7 @@ export async function getAdminUser() {
     .maybeSingle();
 
   if (!profile || profile.role !== "admin") return null;
-  return { id: profile.user_id as string, role: "admin" as const };
+  return { id: profile.user_id as string, role: "admin", via: "supabase" };
 }
 
 export async function requireAdmin() {

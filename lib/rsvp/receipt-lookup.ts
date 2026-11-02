@@ -23,7 +23,7 @@ export async function loadReceipt(token?: string): Promise<ReceiptView> {
     return {
       found: true,
       attending: local.attending,
-      validated: false,
+      validated: true,
     };
   }
 

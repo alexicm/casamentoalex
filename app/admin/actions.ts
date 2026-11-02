@@ -1,16 +1,23 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import QRCode from "qrcode";
 import { requireAdmin } from "@/lib/auth/admin";
+import {
+  ADMIN_CODE_COOKIE,
+  adminCookieOptions,
+  codeMatches,
+  createAdminSessionToken,
+} from "@/lib/auth/admin-code";
 import { DEFAULT_EVENT } from "@/lib/event/defaults";
 import { suggestMatches } from "@/lib/rsvp/matching";
 import { normalizeName } from "@/lib/rsvp/normalize";
 import { createInviteToken, hashInviteToken } from "@/lib/rsvp/tokens";
 import { createServiceClient } from "@/lib/supabase/admin";
-import QRCode from "qrcode";
-import { redirect } from "next/navigation";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseAuthConfigured } from "@/lib/supabase/env";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 async function eventId(service: ReturnType<typeof createServiceClient>) {
   const { data } = await service
@@ -189,10 +196,22 @@ export async function generateInviteLink(guestId: string) {
   return { url, qr };
 }
 
+export async function unlockAdminWithCode(code: string) {
+  if (!codeMatches(code)) {
+    return { ok: false as const, message: "Código inválido. Confira e tente de novo." };
+  }
+  const jar = await cookies();
+  jar.set(ADMIN_CODE_COOKIE, createAdminSessionToken(code), adminCookieOptions());
+  return { ok: true as const };
+}
+
 export async function signOut() {
-  if (!isSupabaseAuthConfigured()) redirect("/admin/login");
-  const supabase = await createServerSupabaseClient();
-  await supabase.auth.signOut();
+  const jar = await cookies();
+  jar.set(ADMIN_CODE_COOKIE, "", adminCookieOptions(0));
+  if (isSupabaseAuthConfigured()) {
+    const supabase = await createServerSupabaseClient();
+    await supabase.auth.signOut();
+  }
   redirect("/admin/login");
 }
 

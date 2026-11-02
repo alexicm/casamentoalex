@@ -1,16 +1,23 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
+import { ALL_SEED_GUESTS } from "@/lib/rsvp/guest-seed";
+import { normalizeName } from "@/lib/rsvp/normalize";
 
 export type LocalSubmission = {
   id: string;
+  guestSeedKey: string;
+  guestDisplayName: string;
   fullName: string;
   attending: boolean;
   contact: string | null;
   receipt: string;
   receiptHash: string;
   idempotencyKey: string | null;
-  reviewStatus: "pending_review";
+  bringingCompanion: boolean;
+  companionName: string | null;
+  companionIsChild: boolean;
+  reviewStatus: "linked";
   createdAt: string;
 };
 
@@ -31,11 +38,34 @@ function withLock<T>(fn: () => Promise<T>): Promise<T> {
   return run;
 }
 
+function hydrate(row: Partial<LocalSubmission> & { fullName: string }): LocalSubmission {
+  return {
+    id: row.id ?? randomUUID(),
+    guestSeedKey: row.guestSeedKey ?? "",
+    guestDisplayName: row.guestDisplayName ?? row.fullName,
+    fullName: row.fullName,
+    attending: Boolean(row.attending),
+    contact: row.contact ?? null,
+    receipt: row.receipt ?? "",
+    receiptHash: row.receiptHash ?? "",
+    idempotencyKey: row.idempotencyKey ?? null,
+    bringingCompanion: Boolean(row.bringingCompanion),
+    companionName: row.companionName ?? null,
+    companionIsChild: Boolean(row.companionIsChild),
+    reviewStatus: "linked",
+    createdAt: row.createdAt ?? new Date().toISOString(),
+  };
+}
+
 async function readStore(): Promise<StoreFile> {
   try {
     const raw = await readFile(DATA_PATH, "utf8");
     const parsed = JSON.parse(raw) as StoreFile;
-    return { submissions: Array.isArray(parsed.submissions) ? parsed.submissions : [] };
+    return {
+      submissions: Array.isArray(parsed.submissions)
+        ? parsed.submissions.map((row) => hydrate(row))
+        : [],
+    };
   } catch {
     return { submissions: [] };
   }
@@ -53,41 +83,76 @@ export function canUseLocalRsvp() {
   );
 }
 
+function alreadyHasGuest(store: StoreFile, guestSeedKey: string, fullName: string) {
+  const normalized = normalizeName(fullName);
+  return store.submissions.some((row) => {
+    if (row.guestSeedKey && row.guestSeedKey === guestSeedKey) return true;
+    return !row.guestSeedKey && normalizeName(row.fullName) === normalized;
+  });
+}
+
 export async function saveLocalRsvp(input: {
+  guestSeedKey: string;
+  guestDisplayName: string;
   fullName: string;
   attending: boolean;
   contact: string | null;
   receipt: string;
   receiptHash: string;
   idempotencyKey: string | null;
-}): Promise<LocalSubmission> {
+  bringingCompanion: boolean;
+  companionName: string | null;
+  companionIsChild: boolean;
+}): Promise<{ alreadyAnswered: true } | (LocalSubmission & { alreadyAnswered: false })> {
   return withLock(async () => {
     const store = await readStore();
     if (input.idempotencyKey) {
       const existing = store.submissions.find(
         (row) => row.idempotencyKey === input.idempotencyKey,
       );
-      if (existing) return existing;
+      if (existing) return { ...existing, alreadyAnswered: false };
+    }
+    if (alreadyHasGuest(store, input.guestSeedKey, input.fullName)) {
+      return { alreadyAnswered: true };
     }
 
-    const row: LocalSubmission = {
+    const row = hydrate({
       id: randomUUID(),
+      guestSeedKey: input.guestSeedKey,
+      guestDisplayName: input.guestDisplayName,
       fullName: input.fullName,
       attending: input.attending,
       contact: input.contact,
       receipt: input.receipt,
       receiptHash: input.receiptHash,
       idempotencyKey: input.idempotencyKey,
-      reviewStatus: "pending_review",
+      bringingCompanion: input.bringingCompanion,
+      companionName: input.companionName,
+      companionIsChild: input.companionIsChild,
+      reviewStatus: "linked",
       createdAt: new Date().toISOString(),
-    };
+    });
     store.submissions.push(row);
     await writeStore(store);
-    return row;
+    return { ...row, alreadyAnswered: false };
   });
 }
 
 export async function findLocalReceipt(receiptHash: string) {
   const store = await readStore();
   return store.submissions.find((row) => row.receiptHash === receiptHash) ?? null;
+}
+
+export async function listLocalRsvps() {
+  const store = await readStore();
+  return store.submissions;
+}
+
+export function listedGuestsForMatching() {
+  return ALL_SEED_GUESTS.map((guest) => ({
+    id: guest.seedKey,
+    displayName: guest.displayName,
+    normalizedName: normalizeName(guest.displayName),
+    officialStatus: guest.officialStatus,
+  }));
 }

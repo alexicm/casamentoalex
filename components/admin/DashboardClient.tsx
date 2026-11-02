@@ -11,18 +11,10 @@ import {
   updateEventSettings,
   updateGuestStatus,
 } from "@/app/admin/actions";
+import type { AdminGuest } from "@/lib/rsvp/admin-view";
+import { companionLabel, guestIsConfirmed } from "@/lib/rsvp/seats";
 
-type Guest = {
-  id: string;
-  display_name: string;
-  group_owner: "Alex" | "Paloma";
-  official_status: string;
-  confirmation_source: string;
-  preferred_contact: string | null;
-  notes: string | null;
-  updated_at: string;
-  seed_key: string | null;
-};
+type Guest = AdminGuest;
 
 type Submission = {
   id: string;
@@ -56,13 +48,17 @@ type DashboardClientProps = {
     declined: number;
     pendingReview: number;
     responseRate: number;
+    seats: number;
+    adultCompanions: number;
+    children: number;
   };
+  localMode?: boolean;
 };
 
 const STATUS_LABEL: Record<string, string> = {
   awaiting_response: "Pendente",
   manually_confirmed: "Confirmado (manual)",
-  confirmed_via_token: "Confirmado (link)",
+  confirmed_via_token: "Confirmado no site",
   declined: "Não vai",
   duplicate_flagged: "Possível duplicata",
 };
@@ -73,6 +69,7 @@ export function DashboardClient({
   submissions,
   audit,
   stats,
+  localMode = false,
 }: DashboardClientProps) {
   const [query, setQuery] = useState("");
   const [owner, setOwner] = useState("all");
@@ -102,14 +99,22 @@ export function DashboardClient({
             <p className="eyebrow">Organização</p>
             <h1 className="mt-2 font-serif text-4xl text-olive">Painel Alex & Paloma</h1>
             <p className="mt-2 text-sm text-ink/70">
-              Confirmados históricos e respostas novas ficam separados para não somar duas vezes.
+              Aqui aparece quem da lista confirmou, se leva alguém e se a criança
+              até 10 anos não entra na conta de lugares.
             </p>
           </div>
-          <form action={signOut}>
-            <button className="focus-ring min-h-11 rounded-full border border-olive/20 px-4 text-sm">
-              Sair
-            </button>
-          </form>
+          <div className="flex flex-wrap items-center gap-2">
+            {localMode ? (
+              <p className="rounded-full bg-sage/20 px-4 py-2 text-sm text-olive">
+                Respostas locais
+              </p>
+            ) : null}
+            <form action={signOut}>
+              <button className="focus-ring min-h-11 rounded-full border border-olive/20 px-4 text-sm">
+                Sair
+              </button>
+            </form>
+          </div>
         </header>
 
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -117,11 +122,17 @@ export function DashboardClient({
           <Stat label="Confirmados históricos" value={stats.historicalConfirmed} />
           <Stat label="Pendentes históricos" value={stats.awaiting} />
           <Stat label="Confirmados pelo site" value={stats.siteConfirmed} />
+          <Stat label="Lugares" value={stats.seats} />
+          <Stat label="Acompanhantes adultos" value={stats.adultCompanions} />
+          <Stat label="Crianças até 10" value={stats.children} />
           <Stat label="Recusas" value={stats.declined} />
           <Stat label="Em análise" value={stats.pendingReview} />
           <Stat label="Taxa de resposta" value={`${stats.responseRate}%`} />
         </section>
 
+        <ConfirmedList guests={guests} />
+
+        {localMode ? null : (
         <section className="rounded-[24px] border border-olive/10 bg-paper-light p-5">
           <h2 className="font-serif text-2xl text-olive">Fila de revisão</h2>
           {queue.length === 0 ? (
@@ -182,6 +193,7 @@ export function DashboardClient({
             </ul>
           )}
         </section>
+        )}
 
         <section className="rounded-[24px] border border-olive/10 bg-paper-light p-5">
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
@@ -213,7 +225,7 @@ export function DashboardClient({
                 <option value="all">Qualquer status</option>
                 <option value="awaiting_response">Pendente</option>
                 <option value="manually_confirmed">Confirmado manual</option>
-                <option value="confirmed_via_token">Confirmado link</option>
+                <option value="confirmed_via_token">Confirmado no site</option>
                 <option value="declined">Não vai</option>
               </select>
               <a
@@ -225,6 +237,7 @@ export function DashboardClient({
             </div>
           </div>
 
+          {localMode ? null : (
           <form
             className="mt-4 flex flex-col gap-2 sm:flex-row"
             action={createGuest}
@@ -246,6 +259,7 @@ export function DashboardClient({
               Adicionar
             </button>
           </form>
+          )}
 
           {inviteUrl ? (
             <div className="mt-3 rounded-2xl bg-sage/20 p-4 text-sm">
@@ -267,7 +281,8 @@ export function DashboardClient({
                   <th className="py-2 pr-3">Lista</th>
                   <th className="py-2 pr-3">Status</th>
                   <th className="py-2 pr-3">Origem</th>
-                  <th className="py-2">Ações</th>
+                  <th className="py-2 pr-3">Acompanhante</th>
+                  {localMode ? null : <th className="py-2">Ações</th>}
                 </tr>
               </thead>
               <tbody>
@@ -279,6 +294,16 @@ export function DashboardClient({
                       {STATUS_LABEL[guest.official_status] ?? guest.official_status}
                     </td>
                     <td className="py-3 pr-3">{guest.confirmation_source}</td>
+                    <td className="py-3 pr-3">
+                      {companionLabel({
+                        officialStatus: guest.official_status,
+                        confirmationSource: guest.confirmation_source,
+                        bringingCompanion: guest.bringing_companion,
+                        companionName: guest.companion_name,
+                        companionIsChild: guest.companion_is_child,
+                      })}
+                    </td>
+                    {localMode ? null : (
                     <td className="py-3">
                       <div className="flex flex-wrap gap-2">
                         <button
@@ -316,6 +341,7 @@ export function DashboardClient({
                         </button>
                       </div>
                     </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -324,6 +350,8 @@ export function DashboardClient({
           {pending ? <p className="mt-3 text-sm text-olive">Atualizando...</p> : null}
         </section>
 
+        {localMode ? null : (
+        <>
         <section className="rounded-[24px] border border-olive/10 bg-paper-light p-5">
           <h2 className="font-serif text-2xl text-olive">Dados do evento</h2>
           <form action={updateEventSettings} className="mt-4 grid gap-3">
@@ -391,8 +419,53 @@ export function DashboardClient({
             ))}
           </ul>
         </section>
+        </>
+        )}
       </div>
     </main>
+  );
+}
+
+function ConfirmedList({ guests }: { guests: Guest[] }) {
+  const confirmed = guests.filter((guest) => guestIsConfirmed(guest.official_status));
+  const declined = guests.filter((guest) => guest.official_status === "declined");
+
+  return (
+    <section className="rounded-[24px] border border-olive/10 bg-paper-light p-5">
+      <h2 className="font-serif text-2xl text-olive">Quem confirmou</h2>
+      <p className="mt-1 text-sm text-ink/70">
+        {confirmed.length} da lista confirmados. Criança até 10 anos aparece, mas não
+        soma lugar.
+      </p>
+      {confirmed.length === 0 ? (
+        <p className="mt-3 text-sm text-ink/70">Ainda não há confirmações novas além da lista histórica.</p>
+      ) : (
+        <ul className="mt-4 divide-y divide-olive/10">
+          {confirmed.map((guest) => (
+            <li key={guest.id} className="flex flex-col gap-1 py-3 sm:flex-row sm:items-baseline sm:justify-between">
+              <div>
+                <p className="font-medium">{guest.display_name}</p>
+                <p className="text-sm text-olive">{guest.group_owner}</p>
+              </div>
+              <p className="text-sm text-ink/75">
+                {companionLabel({
+                  officialStatus: guest.official_status,
+                  confirmationSource: guest.confirmation_source,
+                  bringingCompanion: guest.bringing_companion,
+                  companionName: guest.companion_name,
+                  companionIsChild: guest.companion_is_child,
+                })}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+      {declined.length > 0 ? (
+        <p className="mt-4 text-sm text-ink/60">
+          Não vão: {declined.map((guest) => guest.display_name).join(", ")}.
+        </p>
+      ) : null}
+    </section>
   );
 }
 

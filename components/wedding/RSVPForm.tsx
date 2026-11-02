@@ -19,11 +19,23 @@ export function RSVPForm({ inviteToken, setupPending }: RSVPFormProps) {
   const idempotencyKey = useId();
   const [attending, setAttending] = useState<boolean | null>(null);
   const [fullName, setFullName] = useState("");
+  const [bringingCompanion, setBringingCompanion] = useState(false);
+  const [companionName, setCompanionName] = useState("");
+  const [companionIsChild, setCompanionIsChild] = useState(false);
   const [contact, setContact] = useState("");
   const [consent, setConsent] = useState(false);
   const [website, setWebsite] = useState("");
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const sending = useRef(false);
+
+  function chooseAttendance(next: boolean) {
+    setAttending(next);
+    if (!next) {
+      setBringingCompanion(false);
+      setCompanionName("");
+      setCompanionIsChild(false);
+    }
+  }
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -37,6 +49,10 @@ export function RSVPForm({ inviteToken, setupPending }: RSVPFormProps) {
     const submittedName = String(formData.get("fullName") ?? fullName).trim();
     if (submittedName.length < 2) {
       setStatus({ kind: "error", message: "Escreva seu nome como no convite." });
+      return;
+    }
+    if (attending && bringingCompanion && companionName.trim().length < 2) {
+      setStatus({ kind: "error", message: "Escreva o nome de quem vem com você." });
       return;
     }
 
@@ -54,6 +70,9 @@ export function RSVPForm({ inviteToken, setupPending }: RSVPFormProps) {
           website,
           inviteToken,
           idempotencyKey,
+          bringingCompanion: attending ? bringingCompanion : false,
+          companionName: attending && bringingCompanion ? companionName.trim() : "",
+          companionIsChild: attending && bringingCompanion && companionIsChild,
         }),
       });
       const payload = (await response.json()) as {
@@ -103,8 +122,9 @@ export function RSVPForm({ inviteToken, setupPending }: RSVPFormProps) {
           Confirma sua presença
         </h2>
         <p className="mx-auto mt-4 max-w-md text-center text-[0.98rem] leading-relaxed text-ink/80">
-          Queremos vocês perto. Confirma aí — e venha com o coração aberto,
-          boas histórias e vontade de celebrar.
+          Só quem está na lista consegue confirmar, e cada nome responde uma
+          vez. Se for levar alguém, a gente precisa do nome — criança até 10
+          anos vem junto, mas não ocupa lugar extra.
         </p>
 
         {setupPending ? (
@@ -118,13 +138,13 @@ export function RSVPForm({ inviteToken, setupPending }: RSVPFormProps) {
           <legend className="sr-only">Você estará presente?</legend>
           <Choice
             selected={attending === true}
-            onSelect={() => setAttending(true)}
+            onSelect={() => chooseAttendance(true)}
             title="Sim, estarei presente"
             note="Quero fazer parte desse encontro."
           />
           <Choice
             selected={attending === false}
-            onSelect={() => setAttending(false)}
+            onSelect={() => chooseAttendance(false)}
             title="Não poderei comparecer"
             note="Vou sentir falta, mas aviso com carinho."
           />
@@ -145,9 +165,61 @@ export function RSVPForm({ inviteToken, setupPending }: RSVPFormProps) {
           />
         </label>
         <p className="mt-2 text-xs leading-relaxed text-ink/55">
-          Se tiver sobrenome, escreva também — assim não misturamos pessoas com
-          o mesmo prenome.
+          Use o nome como está na lista. Se tiver sobrenome, escreva também —
+          assim não misturamos pessoas com o mesmo prenome.
         </p>
+
+        {attending ? (
+          <fieldset className="mt-8 grid gap-3">
+            <legend className="mb-1 text-[0.7rem] tracking-[0.18em] text-olive uppercase">
+              Vai levar alguém?
+            </legend>
+            <Choice
+              selected={!bringingCompanion}
+              onSelect={() => {
+                setBringingCompanion(false);
+                setCompanionName("");
+                setCompanionIsChild(false);
+              }}
+              title="Não, vou sozinho(a)"
+              note="Um lugar na mesa já está reservado para você."
+            />
+            <Choice
+              selected={bringingCompanion}
+              onSelect={() => setBringingCompanion(true)}
+              title="Sim, vou levar alguém"
+              note="Precisamos do nome. Criança até 10 anos não conta lugar."
+            />
+          </fieldset>
+        ) : null}
+
+        {attending && bringingCompanion ? (
+          <div className="mt-6">
+            <label className="block">
+              <span className="mb-1 block text-[0.7rem] tracking-[0.18em] text-olive uppercase">
+                Nome de quem vem com você
+              </span>
+              <input
+                required
+                name="companionName"
+                autoComplete="off"
+                value={companionName}
+                onChange={(event) => setCompanionName(event.target.value)}
+                placeholder="Nome completo de quem acompanha"
+                className="letter-field focus-ring min-h-12 w-full bg-transparent px-1 text-lg text-ink"
+              />
+            </label>
+            <label className="mt-4 flex items-start gap-3 text-sm leading-relaxed text-ink/75">
+              <input
+                type="checkbox"
+                checked={companionIsChild}
+                onChange={(event) => setCompanionIsChild(event.target.checked)}
+                className="mt-1 h-5 w-5 accent-burgundy"
+              />
+              É criança de até 10 anos — vem junto, mas não ocupa lugar extra.
+            </label>
+          </div>
+        ) : null}
 
         <label className="mt-6 block">
           <span className="mb-1 block text-[0.7rem] tracking-[0.18em] text-olive uppercase">

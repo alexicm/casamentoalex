@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { DEFAULT_EVENT } from "@/lib/event/defaults";
-import { canUseLocalRsvp, saveLocalRsvp } from "@/lib/rsvp/local-store";
-import { suggestMatches } from "@/lib/rsvp/matching";
+import { ALL_SEED_GUESTS } from "@/lib/rsvp/guest-seed";
+import { canUseLocalRsvp, listedGuestsForMatching, saveLocalRsvp } from "@/lib/rsvp/local-store";
+import {
+  RESPONDED_STATUSES,
+  companionCounts,
+  resolveListedGuest,
+} from "@/lib/rsvp/matching";
 import { normalizeName } from "@/lib/rsvp/normalize";
 import { allowRequest, hashIp } from "@/lib/rsvp/rate-limit";
 import { createReceiptToken, hashReceiptToken } from "@/lib/rsvp/receipt";
@@ -10,7 +15,7 @@ import { createServiceClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured, SETUP_PENDING_MESSAGE } from "@/lib/supabase/env";
 import {
   CONSENT_VERSION,
-  nameNeedsReview,
+  RSVP_MESSAGES,
   rsvpInputSchema,
 } from "@/lib/validators/rsvp";
 
@@ -55,19 +60,41 @@ export async function POST(request: Request) {
     : createReceiptToken();
   const receiptHash = hashReceiptToken(receipt);
   const contact = input.contact?.trim() || null;
+  const bringingCompanion = Boolean(input.attending && input.bringingCompanion);
+  const companionIsChild = Boolean(bringingCompanion && input.companionIsChild);
+  const companionName = bringingCompanion ? input.companionName?.trim() || null : null;
 
   if (!supabaseReady) {
+    const listed = listedGuestsForMatching();
+    const localMatch = resolveListedGuest(input.fullName, listed);
+    if (!localMatch.ok) {
+      return NextResponse.json({ message: RSVP_MESSAGES[localMatch.code] }, { status: 400 });
+    }
+    const seed = ALL_SEED_GUESTS.find((guest) => guest.seedKey === localMatch.guest.id);
+    if (seed && RESPONDED_STATUSES.has(seed.officialStatus)) {
+      return NextResponse.json({ message: RSVP_MESSAGES.already }, { status: 409 });
+    }
     const saved = await saveLocalRsvp({
+      guestSeedKey: localMatch.guest.id,
+      guestDisplayName: localMatch.guest.displayName,
       fullName: input.fullName.trim(),
       attending: input.attending,
       contact,
       receipt,
       receiptHash,
       idempotencyKey: input.idempotencyKey ?? null,
+      bringingCompanion,
+      companionName,
+      companionIsChild,
     });
+    if (saved.alreadyAnswered) {
+      return NextResponse.json({ message: RSVP_MESSAGES.already }, { status: 409 });
+    }
     return NextResponse.json({
-      message: "Recebemos sua resposta com carinho. Obrigado por nos contar!",
-      validated: false,
+      message: input.attending
+        ? "Que alegria ter você com a gente."
+        : "Vamos sentir sua falta, mas agradecemos por nos avisar.",
+      validated: true,
       attending: saved.attending,
       receipt: saved.receipt,
     });
@@ -92,7 +119,7 @@ export async function POST(request: Request) {
 
   const { data: guests } = await supabase
     .from("guests")
-    .select("id, display_name, normalized_name, invite_token_hash")
+    .select("id, display_name, normalized_name, invite_token_hash, official_status")
     .eq("event_id", event.id)
     .is("deleted_at", null);
 
@@ -101,47 +128,30 @@ export async function POST(request: Request) {
     displayName: guest.display_name as string,
     normalizedName: guest.normalized_name as string,
     inviteTokenHash: guest.invite_token_hash as string | null,
+    officialStatus: guest.official_status as string,
   }));
 
-  let guestId: string | null = null;
-  let validated = false;
-  let matching = suggestMatches(input.fullName, guestList);
-
+  let matched = resolveListedGuest(input.fullName, guestList);
   if (token) {
     const hashed = hashInviteToken(token);
     const tokenGuest = guestList.find((guest) => guest.inviteTokenHash === hashed);
     if (tokenGuest) {
-      guestId = tokenGuest.id;
-      validated = true;
-      matching = { state: "suggested", candidates: [tokenGuest], reason: "token" };
+      matched = { ok: true, guest: tokenGuest };
     }
   }
 
-  const { data: recent } = await supabase
-    .from("rsvp_submissions")
-    .select("id")
-    .eq("event_id", event.id)
-    .eq("normalized_submitted_name", normalized)
-    .gte("submitted_at", new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString());
+  if (!matched.ok) {
+    return NextResponse.json({ message: RSVP_MESSAGES[matched.code] }, { status: 400 });
+  }
 
-  const duplicate = Boolean(recent && recent.length > 0);
-  const reviewStatus = validated
-    ? "linked"
-    : duplicate || nameNeedsReview(input.fullName)
-      ? duplicate
-        ? "duplicate_flagged"
-        : "pending_review"
-      : matching.state === "ambiguous"
-        ? "pending_review"
-        : "pending_review";
+  const guest = guestList.find((entry) => entry.id === matched.guest.id) ?? {
+    ...matched.guest,
+    officialStatus: "awaiting_response",
+  };
 
-  const matchingState = validated
-    ? "linked"
-    : matching.state === "ambiguous"
-      ? "ambiguous"
-      : matching.state === "suggested"
-        ? "suggested"
-        : "unmatched";
+  if (RESPONDED_STATUSES.has(guest.officialStatus)) {
+    return NextResponse.json({ message: RSVP_MESSAGES.already }, { status: 409 });
+  }
 
   if (input.idempotencyKey) {
     const { data: existing } = await supabase
@@ -153,30 +163,54 @@ export async function POST(request: Request) {
     if (existing) {
       return NextResponse.json({
         message: "Recebemos sua resposta com carinho. Obrigado por nos contar!",
-        validated: existing.review_status === "linked",
+        validated: true,
         attending: existing.attendance_choice,
         receipt,
       });
     }
   }
 
+  const [{ data: priorByGuest }, { data: priorByName }] = await Promise.all([
+    supabase
+      .from("rsvp_submissions")
+      .select("id")
+      .eq("event_id", event.id)
+      .eq("guest_id", guest.id)
+      .neq("review_status", "discarded")
+      .limit(1),
+    supabase
+      .from("rsvp_submissions")
+      .select("id")
+      .eq("event_id", event.id)
+      .eq("normalized_submitted_name", guest.normalizedName)
+      .neq("review_status", "discarded")
+      .limit(1),
+  ]);
+  if ((priorByGuest && priorByGuest.length > 0) || (priorByName && priorByName.length > 0)) {
+    return NextResponse.json({ message: RSVP_MESSAGES.already }, { status: 409 });
+  }
+
+  const nextStatus = input.attending ? "confirmed_via_token" : "declined";
   const { data: submission, error: insertError } = await supabase
     .from("rsvp_submissions")
     .insert({
       event_id: event.id,
-      guest_id: guestId,
+      guest_id: guest.id,
       submitted_full_name: input.fullName.trim(),
       normalized_submitted_name: normalized,
       attendance_choice: input.attending,
       optional_contact: contact,
-      matching_state: matchingState,
-      review_status: reviewStatus,
+      matching_state: "linked",
+      review_status: "linked",
       consent_version: CONSENT_VERSION,
       request_fingerprint_hash: ipHash,
-      suggested_guest_ids: matching.candidates.map((candidate) => candidate.id),
-      reviewed_at: validated ? new Date().toISOString() : null,
+      suggested_guest_ids: [guest.id],
+      reviewed_at: new Date().toISOString(),
       receipt_token_hash: receiptHash,
       idempotency_key: input.idempotencyKey ?? null,
+      bringing_companion: bringingCompanion,
+      companion_name: companionName,
+      companion_is_child: companionIsChild,
     })
     .select("id")
     .single();
@@ -188,46 +222,40 @@ export async function POST(request: Request) {
     );
   }
 
-  if (validated && guestId) {
-    const nextStatus = input.attending ? "confirmed_via_token" : "declined";
-    const { data: before } = await supabase.from("guests").select("*").eq("id", guestId).single();
-    await supabase
-      .from("guests")
-      .update({
-        official_status: nextStatus,
-        confirmation_source: "personal_link",
-        preferred_contact: contact ?? before?.preferred_contact,
-      })
-      .eq("id", guestId);
+  const { data: before } = await supabase.from("guests").select("*").eq("id", guest.id).single();
+  await supabase
+    .from("guests")
+    .update({
+      official_status: nextStatus,
+      confirmation_source: token ? "personal_link" : "public_form",
+      preferred_contact: contact ?? before?.preferred_contact,
+      bringing_companion: bringingCompanion,
+      companion_name: companionName,
+      companion_is_child: companionIsChild,
+    })
+    .eq("id", guest.id);
 
-    await supabase.from("rsvp_audit_log").insert({
-      guest_id: guestId,
-      submission_id: submission.id,
-      actor_type: "guest",
-      action: "confirm_via_token",
-      before_json: before,
-      after_json: { official_status: nextStatus, attendance_choice: input.attending },
-    });
-  } else {
-    await supabase.from("rsvp_audit_log").insert({
-      submission_id: submission.id,
-      actor_type: "guest",
-      action: "public_submission",
-      after_json: {
-        submitted_full_name: input.fullName.trim(),
-        attendance_choice: input.attending,
-        matching_state: matchingState,
-      },
-    });
-  }
+  await supabase.from("rsvp_audit_log").insert({
+    guest_id: guest.id,
+    submission_id: submission.id,
+    actor_type: "guest",
+    action: token ? "confirm_via_token" : "confirm_via_list",
+    before_json: before,
+    after_json: {
+      official_status: nextStatus,
+      attendance_choice: input.attending,
+      bringing_companion: bringingCompanion,
+      companion_name: companionName,
+      companion_is_child: companionIsChild,
+      companion_counts: companionCounts(bringingCompanion, companionIsChild),
+    },
+  });
 
   return NextResponse.json({
-    message: validated
-      ? input.attending
-        ? "Que alegria ter você com a gente."
-        : "Vamos sentir sua falta, mas agradecemos por nos avisar."
-      : "Recebemos sua resposta com carinho. Obrigado por nos contar!",
-    validated,
+    message: input.attending
+      ? "Que alegria ter você com a gente."
+      : "Vamos sentir sua falta, mas agradecemos por nos avisar.",
+    validated: true,
     attending: input.attending,
     receipt,
   });
