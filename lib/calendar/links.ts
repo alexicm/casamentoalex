@@ -2,7 +2,7 @@ import { DEFAULT_EVENT, publicLocationLine, type PublicEvent } from "@/lib/event
 
 const TITLE = "Casamento Alex & Paloma";
 const DETAILS =
-  "Encontro de Alex e Paloma a partir das 17h. Mais do que um casamento, um encontro. A duração no calendário é técnica e pode ser ajustada. Não há horário de encerramento oficial divulgado.";
+  "Encontro de Alex e Paloma a partir das 17h30. Mais do que um casamento, um encontro. A duração no calendário é técnica e pode ser ajustada. Não há horário de encerramento oficial divulgado.";
 
 export type CalendarLinks = {
   google: string;

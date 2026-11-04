@@ -4,7 +4,7 @@ import { buildIcs } from "@/lib/calendar/ics";
 describe("arquivo de calendário", () => {
   it("usa o fuso de Brasília e não afirma horário de encerramento", () => {
     const ics = buildIcs();
-    expect(ics).toContain("DTSTART;TZID=America/Sao_Paulo:20261220T170000");
+    expect(ics).toContain("DTSTART;TZID=America/Sao_Paulo:20261220T173000");
     expect(ics).toContain("SUMMARY:Casamento Alex & Paloma");
     expect(ics).toContain("DURATION:PT6H");
     expect(ics).not.toContain("DTEND");

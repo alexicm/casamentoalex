@@ -18,7 +18,7 @@ export function CalendarAdd({ className = "" }: CalendarAddProps) {
         Adicionar à agenda
       </p>
       <p className="mt-2 text-center text-sm leading-relaxed text-ink/65">
-        20 de dezembro de 2026, a partir das 17h.
+        20 de dezembro de 2026, a partir das 17h30.
       </p>
       <div className="mt-4 grid grid-cols-2 gap-2">
         <CalendarLink href={links.google} label="Google" note="Gmail" />

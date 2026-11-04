@@ -2,7 +2,7 @@ export const DEFAULT_EVENT = {
   slug: "alex-paloma-2026",
   coupleNames: "Alex & Paloma",
   eventDate: "2026-12-20",
-  startsAtLocal: "17:00",
+  startsAtLocal: "17:30",
   timezone: "America/Sao_Paulo",
   venueName: "BuGú Delícias",
   venueAddress:

@@ -10,6 +10,11 @@ type EventDetailsProps = {
   event: PublicEvent;
 };
 
+function formatStartTime(startsAtLocal: string) {
+  const [hour = "0", minute = "00"] = startsAtLocal.split(":");
+  return minute === "00" ? `${Number(hour)}h` : `${Number(hour)}h${minute}`;
+}
+
 function remainingParts(eventDate: string, startsAtLocal: string) {
   const target = new Date(`${eventDate}T${startsAtLocal}:00-03:00`);
   const diff = target.getTime() - Date.now();
@@ -61,7 +66,7 @@ export function EventDetails({ event }: EventDetailsProps) {
         <article className="paper-card mt-10 p-6 text-center">
           <p className="font-serif text-2xl capitalize text-ink">{prettyDate}</p>
           <p className="mt-2 text-sm tracking-[0.18em] text-olive uppercase">
-            A partir das {event.startsAtLocal.replace(":00", "h")}
+            A partir das {formatStartTime(event.startsAtLocal)}
           </p>
           <div className="hairline my-6" />
           <button

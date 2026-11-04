@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Alex & Paloma · 20.12.2026",
     description:
-      "Mais do que um casamento, um encontro. 20.12.2026, Brasília, a partir das 17h.",
+      "Mais do que um casamento, um encontro. 20.12.2026, Brasília, a partir das 17h30.",
     locale: "pt_BR",
     type: "website",
     images: [{ url: "/assets/wedding/save-the-date.jpg" }],

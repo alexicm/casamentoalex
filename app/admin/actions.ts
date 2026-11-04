@@ -224,7 +224,7 @@ export async function updateEventSettings(formData: FormData) {
       venue_name: String(formData.get("venueName") ?? ""),
       venue_address: String(formData.get("venueAddress") ?? ""),
       maps_url: String(formData.get("mapsUrl") ?? ""),
-      starts_at_local: String(formData.get("startsAtLocal") ?? "17:00"),
+      starts_at_local: String(formData.get("startsAtLocal") ?? "17:30"),
       dress_code_json: {
         title: String(formData.get("dressTitle") ?? "Coquetel elegante"),
         subtitle: String(formData.get("dressSubtitle") ?? ""),

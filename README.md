@@ -1,6 +1,6 @@
 # Alex & Paloma · Wedding Experience
 
-Convite digital em aquarela para o casamento em **20 de dezembro de 2026**, a partir das 17h, no **BuGú Delícias**, Taguatinga, Brasília/DF.
+Convite digital em aquarela para o casamento em **20 de dezembro de 2026**, a partir das 17h30, no **BuGú Delícias**, Taguatinga, Brasília/DF.
 
 A primeira dobra é um envelope selado. Depois, a página informa, inspira o look e converte a visita em confirmação real. Sem Supabase, o formulário **não finge** que a resposta foi gravada.
 
