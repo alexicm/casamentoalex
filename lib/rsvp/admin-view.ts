@@ -1,7 +1,7 @@
 import { ALL_SEED_GUESTS } from "@/lib/rsvp/guest-seed";
 import type { LocalSubmission } from "@/lib/rsvp/local-store";
 import { companionCounts } from "@/lib/rsvp/matching";
-import { guestIsConfirmed, guestSeatCount } from "@/lib/rsvp/seats";
+import { guestConfirmedViaSite, guestSeatCount } from "@/lib/rsvp/seats";
 
 export type AdminGuest = {
   id: string;
@@ -79,19 +79,19 @@ export function computeGuestStats(list: AdminGuest[]) {
       guest.official_status === "manually_confirmed" &&
       guest.confirmation_source === "import",
   ).length;
-  const siteConfirmed = list.filter(
-    (guest) =>
-      guest.official_status === "confirmed_via_token" ||
-      (guest.official_status === "manually_confirmed" &&
-        guest.confirmation_source !== "import"),
-  ).length;
+  const siteConfirmedList = list.filter((guest) =>
+    guestConfirmedViaSite({
+      officialStatus: guest.official_status,
+      confirmationSource: guest.confirmation_source,
+    }),
+  );
+  const siteConfirmed = siteConfirmedList.length;
   const declined = list.filter((guest) => guest.official_status === "declined").length;
   const awaiting = list.filter((guest) => guest.official_status === "awaiting_response").length;
-  const confirmed = list.filter((guest) => guestIsConfirmed(guest.official_status));
-  const adultCompanions = confirmed.filter((guest) =>
+  const adultCompanions = siteConfirmedList.filter((guest) =>
     companionCounts(guest.bringing_companion, guest.companion_is_child),
   ).length;
-  const children = confirmed.filter(
+  const children = siteConfirmedList.filter(
     (guest) => guest.bringing_companion && guest.companion_is_child,
   ).length;
   const seats = list.reduce(

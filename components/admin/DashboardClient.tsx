@@ -12,7 +12,7 @@ import {
   updateGuestStatus,
 } from "@/app/admin/actions";
 import type { AdminGuest } from "@/lib/rsvp/admin-view";
-import { companionLabel, guestIsConfirmed } from "@/lib/rsvp/seats";
+import { companionLabel, guestConfirmedViaSite } from "@/lib/rsvp/seats";
 
 type Guest = AdminGuest;
 
@@ -427,18 +427,25 @@ export function DashboardClient({
 }
 
 function ConfirmedList({ guests }: { guests: Guest[] }) {
-  const confirmed = guests.filter((guest) => guestIsConfirmed(guest.official_status));
+  const confirmed = guests.filter((guest) =>
+    guestConfirmedViaSite({
+      officialStatus: guest.official_status,
+      confirmationSource: guest.confirmation_source,
+    }),
+  );
   const declined = guests.filter((guest) => guest.official_status === "declined");
 
   return (
     <section className="rounded-[24px] border border-olive/10 bg-paper-light p-5">
-      <h2 className="font-serif text-2xl text-olive">Quem confirmou</h2>
+      <h2 className="font-serif text-2xl text-olive">Quem confirmou pelo site</h2>
       <p className="mt-1 text-sm text-ink/70">
-        {confirmed.length} da lista confirmados. Criança até 10 anos aparece, mas não
-        soma lugar.
+        {confirmed.length}{" "}
+        {confirmed.length === 1 ? "confirmação" : "confirmações"} pelo link. A lista
+        histórica da Paloma não entra aqui. Criança até 10 anos aparece, mas não soma
+        lugar.
       </p>
       {confirmed.length === 0 ? (
-        <p className="mt-3 text-sm text-ink/70">Ainda não há confirmações novas além da lista histórica.</p>
+        <p className="mt-3 text-sm text-ink/70">Ainda ninguém confirmou pelo site.</p>
       ) : (
         <ul className="mt-4 divide-y divide-olive/10">
           {confirmed.map((guest) => (

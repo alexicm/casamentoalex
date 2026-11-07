@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { PALOMA_GUESTS } from "@/lib/rsvp/guest-seed";
 import { companionCounts, resolveListedGuest, suggestMatches } from "@/lib/rsvp/matching";
 import { normalizeName } from "@/lib/rsvp/normalize";
-import { companionLabel, guestSeatCount } from "@/lib/rsvp/seats";
+import { companionLabel, guestConfirmedViaSite, guestSeatCount } from "@/lib/rsvp/seats";
 
 const guests = PALOMA_GUESTS.map((guest, index) => ({
   id: `${index}`,
@@ -71,5 +71,20 @@ describe("sugestão interna de nomes", () => {
         companionIsChild: true,
       }),
     ).toContain("não conta");
+  });
+
+  it("só conta confirmação pelo site, não a lista histórica", () => {
+    expect(
+      guestConfirmedViaSite({
+        officialStatus: "confirmed_via_token",
+        confirmationSource: "public_form",
+      }),
+    ).toBe(true);
+    expect(
+      guestConfirmedViaSite({
+        officialStatus: "manually_confirmed",
+        confirmationSource: "import",
+      }),
+    ).toBe(false);
   });
 });

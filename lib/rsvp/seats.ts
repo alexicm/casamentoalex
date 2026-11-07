@@ -6,6 +6,17 @@ export function guestIsConfirmed(status: string) {
   return CONFIRMED.has(status);
 }
 
+export function guestConfirmedViaSite(input: {
+  officialStatus: string;
+  confirmationSource: string;
+}) {
+  if (input.officialStatus === "confirmed_via_token") return true;
+  return (
+    input.officialStatus === "manually_confirmed" &&
+    input.confirmationSource !== "import"
+  );
+}
+
 export function guestSeatCount(input: {
   officialStatus: string;
   bringingCompanion: boolean;
