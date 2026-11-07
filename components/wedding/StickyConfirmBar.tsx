@@ -97,7 +97,7 @@ export function StickyConfirmBar({ onConfirm }: StickyConfirmBarProps) {
           onClick={onConfirm}
           className="focus-ring min-h-12 w-full rounded-full text-sm tracking-[0.16em] text-ivory uppercase"
         >
-          Confirmar presença
+          Confirmar até 5/12
         </button>
       </div>
     </div>

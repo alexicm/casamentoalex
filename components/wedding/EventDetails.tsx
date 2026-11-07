@@ -4,7 +4,7 @@ import { CalendarPlus, MapPin } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SplitScale } from "@/components/motion/SplitScale";
 import type { PublicEvent } from "@/lib/event/defaults";
-import { publicLocationLine } from "@/lib/event/defaults";
+import { formatRsvpDeadline, publicLocationLine } from "@/lib/event/defaults";
 
 type EventDetailsProps = {
   event: PublicEvent;
@@ -68,6 +68,11 @@ export function EventDetails({ event }: EventDetailsProps) {
           <p className="mt-2 text-sm tracking-[0.18em] text-olive uppercase">
             A partir das {formatStartTime(event.startsAtLocal)}
           </p>
+          {formatRsvpDeadline(event.rsvpDeadline) ? (
+            <p className="mt-3 text-sm leading-relaxed text-ink/70">
+              Confirmação até {formatRsvpDeadline(event.rsvpDeadline)}.
+            </p>
+          ) : null}
           <div className="hairline my-6" />
           <button
             type="button"

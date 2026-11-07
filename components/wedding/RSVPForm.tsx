@@ -3,8 +3,10 @@
 import { useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createRitual, firstNameOf, writeRitual } from "@/lib/confirmation-ritual";
+import { formatRsvpDeadline, type PublicEvent } from "@/lib/event/defaults";
 
 type RSVPFormProps = {
+  event: PublicEvent;
   inviteToken?: string;
   setupPending: boolean;
 };
@@ -14,7 +16,8 @@ type Status =
   | { kind: "loading" }
   | { kind: "error"; message: string };
 
-export function RSVPForm({ inviteToken, setupPending }: RSVPFormProps) {
+export function RSVPForm({ event, inviteToken, setupPending }: RSVPFormProps) {
+  const deadlineLabel = formatRsvpDeadline(event.rsvpDeadline);
   const router = useRouter();
   const idempotencyKey = useId();
   const [attending, setAttending] = useState<boolean | null>(null);
@@ -121,7 +124,12 @@ export function RSVPForm({ inviteToken, setupPending }: RSVPFormProps) {
         <h2 className="mt-3 text-center font-serif text-3xl text-burgundy sm:text-4xl">
           Confirma sua presença
         </h2>
-        <p className="mx-auto mt-4 max-w-md text-center text-[0.98rem] leading-relaxed text-ink/80">
+        {deadlineLabel ? (
+          <p className="mx-auto mt-4 max-w-md text-center font-serif text-xl text-burgundy">
+            Confirme até {deadlineLabel}.
+          </p>
+        ) : null}
+        <p className="mx-auto mt-3 max-w-md text-center text-[0.98rem] leading-relaxed text-ink/80">
           Só quem está na lista consegue confirmar, e cada nome responde uma
           vez. Se for levar alguém, a gente precisa do nome — criança até 10
           anos vem junto, mas não ocupa lugar extra.

@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: "Alex & Paloma · 20.12.2026",
   description:
-    "Mais do que um casamento, um encontro. Confirme presença no casamento de Alex e Paloma, 20.12.2026.",
+    "Mais do que um casamento, um encontro. Confirme presença até 5 de dezembro. Casamento de Alex e Paloma, 20.12.2026.",
   applicationName: "Alex & Paloma",
   authors: [{ name: "Alex & Paloma" }],
   openGraph: {

@@ -47,7 +47,11 @@ export async function getPublicEvent(): Promise<PublicEvent> {
         palette: row.dress_code_json?.palette ?? DEFAULT_EVENT.dressCode.palette,
         notes: row.dress_code_json?.notes ?? DEFAULT_EVENT.dressCode.notes,
       },
-      rsvpDeadline: row.rsvp_deadline,
+      rsvpDeadline: row.rsvp_deadline
+        ? new Date(row.rsvp_deadline).toLocaleDateString("en-CA", {
+            timeZone: "America/Sao_Paulo",
+          })
+        : DEFAULT_EVENT.rsvpDeadline,
       publicEnabled: row.public_enabled,
       calendarDurationHours: row.calendar_duration_hours,
       addressVerified: DEFAULT_EVENT.addressVerified,

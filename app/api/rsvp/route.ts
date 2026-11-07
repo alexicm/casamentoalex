@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { DEFAULT_EVENT } from "@/lib/event/defaults";
+import { DEFAULT_EVENT, formatRsvpDeadline, rsvpDeadlinePassed } from "@/lib/event/defaults";
 import { ALL_SEED_GUESTS } from "@/lib/rsvp/guest-seed";
 import { canUseLocalRsvp, listedGuestsForMatching, saveLocalRsvp } from "@/lib/rsvp/local-store";
 import {
@@ -53,6 +53,17 @@ export async function POST(request: Request) {
   const input = parsed.data;
   if (input.website) {
     return NextResponse.json({ message: "Recebemos sua resposta com carinho." }, { status: 200 });
+  }
+
+  const deadline = DEFAULT_EVENT.rsvpDeadline;
+  if (rsvpDeadlinePassed(deadline)) {
+    const label = formatRsvpDeadline(deadline) ?? "a data limite";
+    return NextResponse.json(
+      {
+        message: `O prazo para confirmar era até ${label}. Se precisar ajustar, fale com a gente.`,
+      },
+      { status: 403 },
+    );
   }
 
   const receipt = input.idempotencyKey

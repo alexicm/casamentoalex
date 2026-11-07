@@ -75,7 +75,11 @@ export function WeddingExperience({
         <EventDetails event={event} />
         <DressCodeLookbook event={event} />
         <WineToast />
-        <RSVPForm inviteToken={inviteToken} setupPending={setupPending} />
+        <RSVPForm
+          event={event}
+          inviteToken={inviteToken}
+          setupPending={setupPending}
+        />
         <FinalLetter onConfirm={scrollToRsvp} />
         <footer className="burgundy-stage px-5 pb-[max(2rem,env(safe-area-inset-bottom))] pt-8 text-center">
           <p className="text-xs tracking-[0.2em] text-ivory/65 uppercase">

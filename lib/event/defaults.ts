@@ -20,7 +20,7 @@ export const DEFAULT_EVENT = {
       "Evite o uso de preto e branco.",
     ],
   },
-  rsvpDeadline: null as string | null,
+  rsvpDeadline: "2026-12-05",
   publicEnabled: true,
   calendarDurationHours: 6,
   addressVerified: false,
@@ -30,6 +30,24 @@ export type PublicEvent = typeof DEFAULT_EVENT;
 
 export function publicLocationLine(event: PublicEvent) {
   return `${event.venueName}, Taguatinga, Brasília/DF`;
+}
+
+export function formatRsvpDeadline(deadline: string | null | undefined) {
+  if (!deadline) return null;
+  const day = deadline.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
+  return new Date(`${day}T12:00:00-03:00`).toLocaleDateString("pt-BR", {
+    day: "numeric",
+    month: "long",
+  });
+}
+
+export function rsvpDeadlinePassed(deadline: string | null | undefined, now = new Date()) {
+  if (!deadline) return false;
+  const day = deadline.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return false;
+  const end = new Date(`${day}T23:59:59.999-03:00`);
+  return now.getTime() > end.getTime();
 }
 
 export const WEDDING_ASSETS = {
