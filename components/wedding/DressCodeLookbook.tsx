@@ -151,7 +151,7 @@ export function DressCodeLookbook({ event }: DressCodeLookbookProps) {
                   onClick={() => setOpenDetail(expanded ? null : item.id)}
                 >
                   {item.title}
-                  <span aria-hidden="true">{expanded ? "–" : "+"}</span>
+                  <span aria-hidden="true">{expanded ? "-" : "+"}</span>
                 </button>
                 {expanded ? (
                   <p className="px-4 pb-4 text-sm leading-relaxed text-ink/75">{item.body}</p>

@@ -33,7 +33,7 @@ export function companionLabel(input: {
   companionName: string | null;
   companionIsChild: boolean;
 }) {
-  if (!guestIsConfirmed(input.officialStatus)) return "—";
+  if (!guestIsConfirmed(input.officialStatus)) return "-";
   if (!input.bringingCompanion) {
     if (input.confirmationSource === "import") return "Ainda não informado";
     return "Vem sozinho(a)";

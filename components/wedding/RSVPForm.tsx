@@ -131,7 +131,7 @@ export function RSVPForm({ event, inviteToken, setupPending }: RSVPFormProps) {
         ) : null}
         <p className="mx-auto mt-3 max-w-md text-center text-[0.98rem] leading-relaxed text-ink/80">
           Só quem está na lista consegue confirmar, e cada nome responde uma
-          vez. Se for levar alguém, a gente precisa do nome — criança até 10
+          vez. Se for levar alguém, a gente precisa do nome. Criança até 10
           anos vem junto, mas não ocupa lugar extra.
         </p>
 
@@ -173,7 +173,7 @@ export function RSVPForm({ event, inviteToken, setupPending }: RSVPFormProps) {
           />
         </label>
         <p className="mt-2 text-xs leading-relaxed text-ink/55">
-          Use o nome como está na lista. Se tiver sobrenome, escreva também —
+          Use o nome como está na lista. Se tiver sobrenome, escreva também,
           assim não misturamos pessoas com o mesmo prenome.
         </p>
 
@@ -224,7 +224,7 @@ export function RSVPForm({ event, inviteToken, setupPending }: RSVPFormProps) {
                 onChange={(event) => setCompanionIsChild(event.target.checked)}
                 className="mt-1 h-5 w-5 accent-burgundy"
               />
-              É criança de até 10 anos — vem junto, mas não ocupa lugar extra.
+              É criança de até 10 anos: vem junto, mas não ocupa lugar extra.
             </label>
           </div>
         ) : null}

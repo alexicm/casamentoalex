@@ -27,8 +27,8 @@ export function ThankYouScene({ attending, validated, found }: ThankYouSceneProp
     ? "Se você acabou de enviar uma resposta, ela já está conosco. Volte ao convite quando quiser reler os detalhes do encontro."
     : attending
       ? validated
-        ? "Recebemos sua resposta com muito carinho. Queremos vocês perto — não apenas para assistir à nossa celebração, mas para fazer parte dela."
-        : "Recebemos sua resposta com muito carinho. Vamos conferir os detalhes — isso ainda não é a confirmação final da lista."
+        ? "Recebemos sua resposta com muito carinho. Queremos vocês perto, não apenas para assistir à nossa celebração, mas para fazer parte dela."
+        : "Recebemos sua resposta com muito carinho. Vamos conferir os detalhes. Isso ainda não é a confirmação final da lista."
       : "Obrigado por nos contar. Você continua fazendo parte da nossa história.";
 
   return (
