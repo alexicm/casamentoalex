@@ -3,7 +3,7 @@ import { DEFAULT_EVENT } from "@/lib/event/defaults";
 import { computeGuestStats, mergeLocalGuestList, toAdminGuest } from "@/lib/rsvp/admin-view";
 import { toCsv } from "@/lib/rsvp/csv";
 import { canUseLocalRsvp, listLocalRsvps } from "@/lib/rsvp/local-store";
-import { companionLabel } from "@/lib/rsvp/seats";
+import { companionLabel, guestConfirmedViaSite } from "@/lib/rsvp/seats";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
@@ -58,25 +58,26 @@ export async function GET() {
 }
 
 function csvResponse(guests: ReturnType<typeof toAdminGuest>[]) {
+  const confirmed = guests.filter((guest) =>
+    guestConfirmedViaSite({
+      officialStatus: guest.official_status,
+      confirmationSource: guest.confirmation_source,
+    }),
+  );
   const stats = computeGuestStats(guests);
   const csv = toCsv(
     [
       "Nome",
       "Lista",
-      "Status",
-      "Origem",
       "Acompanhante",
       "Acompanhante e crianca",
       "Contato",
-      "Observacoes",
       "Atualizado em",
       "Lugares totais",
     ],
-    guests.map((guest, index) => [
+    confirmed.map((guest, index) => [
       guest.display_name,
       guest.group_owner,
-      guest.official_status,
-      guest.confirmation_source,
       companionLabel({
         officialStatus: guest.official_status,
         confirmationSource: guest.confirmation_source,
@@ -86,7 +87,6 @@ function csvResponse(guests: ReturnType<typeof toAdminGuest>[]) {
       }),
       guest.companion_is_child ? "sim" : "nao",
       guest.preferred_contact ?? "",
-      guest.notes ?? "",
       guest.updated_at,
       index === 0 ? String(stats.seats) : "",
     ]),
@@ -95,7 +95,7 @@ function csvResponse(guests: ReturnType<typeof toAdminGuest>[]) {
   return new Response(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": 'attachment; filename="convidados-alex-paloma.csv"',
+      "Content-Disposition": 'attachment; filename="confirmados-alex-paloma.csv"',
       "Cache-Control": "no-store",
     },
   });

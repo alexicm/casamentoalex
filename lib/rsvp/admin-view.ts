@@ -94,7 +94,7 @@ export function computeGuestStats(list: AdminGuest[]) {
   const children = siteConfirmedList.filter(
     (guest) => guest.bringing_companion && guest.companion_is_child,
   ).length;
-  const seats = list.reduce(
+  const seats = siteConfirmedList.reduce(
     (sum, guest) =>
       sum +
       guestSeatCount({
