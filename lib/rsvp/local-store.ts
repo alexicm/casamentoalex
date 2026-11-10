@@ -17,7 +17,7 @@ export type LocalSubmission = {
   bringingCompanion: boolean;
   companionName: string | null;
   companionIsChild: boolean;
-  reviewStatus: "linked";
+  reviewStatus: "pending_review" | "linked" | "discarded";
   createdAt: string;
 };
 
@@ -52,7 +52,7 @@ function hydrate(row: Partial<LocalSubmission> & { fullName: string }): LocalSub
     bringingCompanion: Boolean(row.bringingCompanion),
     companionName: row.companionName ?? null,
     companionIsChild: Boolean(row.companionIsChild),
-    reviewStatus: "linked",
+    reviewStatus: row.reviewStatus ?? "pending_review",
     createdAt: row.createdAt ?? new Date().toISOString(),
   };
 }
@@ -129,7 +129,7 @@ export async function saveLocalRsvp(input: {
       bringingCompanion: input.bringingCompanion,
       companionName: input.companionName,
       companionIsChild: input.companionIsChild,
-      reviewStatus: "linked",
+      reviewStatus: "pending_review",
       createdAt: new Date().toISOString(),
     });
     store.submissions.push(row);

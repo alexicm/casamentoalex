@@ -52,6 +52,91 @@ export async function updateGuestStatus(guestId: string, status: "manually_confi
   revalidatePath("/admin/dashboard");
 }
 
+export async function approveSubmission(
+  submissionId: string,
+  groupOwner: "Alex" | "Paloma" = "Alex",
+) {
+  const admin = await requireAdmin();
+  const service = createServiceClient();
+  const { data: submission } = await service
+    .from("rsvp_submissions")
+    .select("*")
+    .eq("id", submissionId)
+    .single();
+  if (!submission) throw new Error("SUBMISSION_NOT_FOUND");
+  if (submission.review_status !== "pending_review" && submission.review_status !== "duplicate_flagged") {
+    throw new Error("ALREADY_REVIEWED");
+  }
+
+  const nextStatus = submission.attendance_choice ? "confirmed_via_token" : "declined";
+  let guestId = submission.guest_id as string | null;
+  let before = null as Record<string, unknown> | null;
+
+  if (guestId) {
+    const { data } = await service.from("guests").select("*").eq("id", guestId).single();
+    before = data;
+    await service
+      .from("guests")
+      .update({
+        display_name: submission.submitted_full_name,
+        normalized_name: normalizeName(String(submission.submitted_full_name)),
+        group_owner: groupOwner,
+        official_status: nextStatus,
+        confirmation_source: "public_form",
+        preferred_contact: submission.optional_contact ?? data?.preferred_contact,
+        bringing_companion: Boolean(submission.bringing_companion),
+        companion_name: (submission.companion_name as string | null) ?? null,
+        companion_is_child: Boolean(submission.companion_is_child),
+        notes: "Validado no painel",
+        deleted_at: null,
+      })
+      .eq("id", guestId);
+  } else {
+    const event = await eventId(service);
+    const { data: guest, error } = await service
+      .from("guests")
+      .insert({
+        event_id: event,
+        group_owner: groupOwner,
+        display_name: submission.submitted_full_name,
+        normalized_name: normalizeName(String(submission.submitted_full_name)),
+        official_status: nextStatus,
+        confirmation_source: "public_form",
+        preferred_contact: submission.optional_contact,
+        bringing_companion: Boolean(submission.bringing_companion),
+        companion_name: (submission.companion_name as string | null) ?? null,
+        companion_is_child: Boolean(submission.companion_is_child),
+        notes: "Validado no painel",
+      })
+      .select("id")
+      .single();
+    if (error || !guest) throw new Error(error?.message ?? "CREATE_FAILED");
+    guestId = guest.id as string;
+  }
+
+  await service
+    .from("rsvp_submissions")
+    .update({
+      guest_id: guestId,
+      matching_state: "linked",
+      review_status: "linked",
+      reviewed_at: new Date().toISOString(),
+      reviewer_id: admin.id || null,
+    })
+    .eq("id", submissionId);
+
+  await service.from("rsvp_audit_log").insert({
+    guest_id: guestId,
+    submission_id: submissionId,
+    actor_type: "admin",
+    actor_id: admin.id || null,
+    action: "approve_submission",
+    before_json: before,
+    after_json: { official_status: nextStatus, group_owner: groupOwner },
+  });
+  revalidatePath("/admin/dashboard");
+}
+
 export async function linkSubmission(submissionId: string, guestId: string) {
   const admin = await requireAdmin();
   const service = createServiceClient();
@@ -62,13 +147,17 @@ export async function linkSubmission(submissionId: string, guestId: string) {
     .single();
   if (!submission) throw new Error("SUBMISSION_NOT_FOUND");
   const { data: before } = await service.from("guests").select("*").eq("id", guestId).single();
-  const nextStatus = submission.attendance_choice ? "manually_confirmed" : "declined";
+  const nextStatus = submission.attendance_choice ? "confirmed_via_token" : "declined";
   await service
     .from("guests")
     .update({
       official_status: nextStatus,
       confirmation_source: "public_form",
       preferred_contact: submission.optional_contact ?? before?.preferred_contact,
+      bringing_companion: Boolean(submission.bringing_companion),
+      companion_name: (submission.companion_name as string | null) ?? null,
+      companion_is_child: Boolean(submission.companion_is_child),
+      notes: "Validado no painel",
     })
     .eq("id", guestId);
   await service
@@ -145,18 +234,60 @@ export async function createGuestFromSubmission(submissionId: string, groupOwner
 export async function discardSubmission(submissionId: string) {
   const admin = await requireAdmin();
   const service = createServiceClient();
+  const { data: submission } = await service
+    .from("rsvp_submissions")
+    .select("*")
+    .eq("id", submissionId)
+    .single();
+  if (!submission) throw new Error("SUBMISSION_NOT_FOUND");
+
   await service
     .from("rsvp_submissions")
     .update({
       review_status: "discarded",
       reviewed_at: new Date().toISOString(),
-      reviewer_id: admin.id,
+      reviewer_id: admin.id || null,
     })
     .eq("id", submissionId);
+
+  if (submission.guest_id) {
+    const { data: guest } = await service
+      .from("guests")
+      .select("id, seed_key, confirmation_source, official_status, notes")
+      .eq("id", submission.guest_id)
+      .single();
+    // Remove cadastros novos do formulário que ainda não foram validados.
+    if (
+      guest &&
+      !guest.seed_key &&
+      guest.confirmation_source === "public_form" &&
+      guest.official_status === "awaiting_response"
+    ) {
+      await service
+        .from("guests")
+        .update({
+          deleted_at: new Date().toISOString(),
+          notes: "Recusado na validação do painel",
+        })
+        .eq("id", guest.id);
+    } else if (guest) {
+      await service
+        .from("guests")
+        .update({
+          notes: "Resposta do formulário recusada na validação",
+          bringing_companion: false,
+          companion_name: null,
+          companion_is_child: false,
+        })
+        .eq("id", guest.id);
+    }
+  }
+
   await service.from("rsvp_audit_log").insert({
+    guest_id: submission.guest_id,
     submission_id: submissionId,
     actor_type: "admin",
-    actor_id: admin.id,
+    actor_id: admin.id || null,
     action: "discard_submission",
   });
   revalidatePath("/admin/dashboard");

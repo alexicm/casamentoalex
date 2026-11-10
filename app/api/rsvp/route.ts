@@ -1,12 +1,7 @@
 import { NextResponse } from "next/server";
 import { DEFAULT_EVENT, formatRsvpDeadline, rsvpDeadlinePassed } from "@/lib/event/defaults";
-import { ALL_SEED_GUESTS } from "@/lib/rsvp/guest-seed";
-import { canUseLocalRsvp, listedGuestsForMatching, saveLocalRsvp } from "@/lib/rsvp/local-store";
-import {
-  companionCounts,
-  guestMayConfirmViaForm,
-  resolveListedGuest,
-} from "@/lib/rsvp/matching";
+import { canUseLocalRsvp, saveLocalRsvp } from "@/lib/rsvp/local-store";
+import { companionCounts, resolveListedGuest } from "@/lib/rsvp/matching";
 import { normalizeName } from "@/lib/rsvp/normalize";
 import { allowRequest, hashIp } from "@/lib/rsvp/rate-limit";
 import { createReceiptToken, hashReceiptToken } from "@/lib/rsvp/receipt";
@@ -78,23 +73,8 @@ export async function POST(request: Request) {
   const normalized = normalizeName(displayName);
 
   if (!supabaseReady) {
-    const listed = listedGuestsForMatching();
-    const localMatch = resolveListedGuest(input.fullName, listed);
-    const seed =
-      localMatch.ok
-        ? ALL_SEED_GUESTS.find((guest) => guest.seedKey === localMatch.guest.id)
-        : undefined;
-    if (
-      seed &&
-      !guestMayConfirmViaForm(seed.officialStatus, seed.confirmationSource)
-    ) {
-      return NextResponse.json({ message: RSVP_MESSAGES.already }, { status: 409 });
-    }
     const saved = await saveLocalRsvp({
-      guestSeedKey:
-        localMatch.ok && seed
-          ? localMatch.guest.id
-          : `walk-in:${normalized}`,
+      guestSeedKey: `pending:${normalized}`,
       guestDisplayName: displayName,
       fullName: displayName,
       attending: input.attending,
@@ -111,9 +91,10 @@ export async function POST(request: Request) {
     }
     return NextResponse.json({
       message: input.attending
-        ? "Que alegria ter você com a gente."
-        : "Vamos sentir sua falta, mas agradecemos por nos avisar.",
-      validated: true,
+        ? "Recebemos sua confirmação. Em breve validamos sua presença."
+        : "Recebemos seu aviso. Obrigado por nos contar.",
+      validated: false,
+      pendingReview: true,
       attending: saved.attending,
       receipt: saved.receipt,
     });
@@ -162,13 +143,17 @@ export async function POST(request: Request) {
     }
   }
 
-  // Nome livre: só vincula se o match for único; ambíguo ou desconhecido vira cadastro novo.
-  let guest =
+  const linkedGuest =
     matched.ok
       ? (guestList.find((entry) => entry.id === matched.guest.id) ?? null)
       : null;
 
-  if (guest && !guestMayConfirmViaForm(guest.officialStatus, guest.confirmationSource)) {
+  if (
+    linkedGuest &&
+    (linkedGuest.officialStatus === "confirmed_via_token" ||
+      (linkedGuest.officialStatus === "declined" &&
+        linkedGuest.confirmationSource !== "import"))
+  ) {
     return NextResponse.json({ message: RSVP_MESSAGES.already }, { status: 409 });
   }
 
@@ -182,7 +167,8 @@ export async function POST(request: Request) {
     if (existing) {
       return NextResponse.json({
         message: "Recebemos sua resposta com carinho. Obrigado por nos contar!",
-        validated: true,
+        validated: false,
+        pendingReview: true,
         attending: existing.attendance_choice,
         receipt,
       });
@@ -200,12 +186,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: RSVP_MESSAGES.already }, { status: 409 });
   }
 
-  if (guest) {
+  if (linkedGuest) {
     const { data: priorByGuest } = await supabase
       .from("rsvp_submissions")
       .select("id")
       .eq("event_id", event.id)
-      .eq("guest_id", guest.id)
+      .eq("guest_id", linkedGuest.id)
       .neq("review_status", "discarded")
       .limit(1);
     if (priorByGuest && priorByGuest.length > 0) {
@@ -213,11 +199,12 @@ export async function POST(request: Request) {
     }
   }
 
-  const nextStatus = input.attending ? "confirmed_via_token" : "declined";
-  const confirmationSource = token ? "personal_link" : "public_form";
-  let linkedFromList = Boolean(guest);
+  let guestId = linkedGuest?.id ?? null;
+  let matchingState: "suggested" | "unmatched" | "linked" = linkedGuest
+    ? "suggested"
+    : "unmatched";
 
-  if (!guest) {
+  if (!guestId) {
     const { data: created, error: createError } = await supabase
       .from("guests")
       .insert({
@@ -225,15 +212,15 @@ export async function POST(request: Request) {
         group_owner: "Alex",
         display_name: displayName,
         normalized_name: normalized,
-        official_status: nextStatus,
-        confirmation_source: confirmationSource,
+        official_status: "awaiting_response",
+        confirmation_source: "public_form",
         preferred_contact: contact,
         bringing_companion: bringingCompanion,
         companion_name: companionName,
         companion_is_child: companionIsChild,
-        notes: "Cadastro pelo formulário",
+        notes: "Aguardando validação do formulário",
       })
-      .select("id, display_name, normalized_name, official_status, confirmation_source, group_owner")
+      .select("id")
       .single();
 
     if (createError || !created) {
@@ -242,34 +229,35 @@ export async function POST(request: Request) {
         { status: 500 },
       );
     }
-
-    guest = {
-      id: created.id as string,
-      displayName: created.display_name as string,
-      normalizedName: created.normalized_name as string,
-      inviteTokenHash: null,
-      officialStatus: created.official_status as string,
-      confirmationSource: created.confirmation_source as string,
-      groupOwner: created.group_owner as "Alex" | "Paloma",
-    };
-    linkedFromList = false;
+    guestId = created.id as string;
+    matchingState = "unmatched";
+  } else {
+    await supabase
+      .from("guests")
+      .update({
+        preferred_contact: contact ?? undefined,
+        bringing_companion: bringingCompanion,
+        companion_name: companionName,
+        companion_is_child: companionIsChild,
+        notes: "Aguardando validação do formulário",
+      })
+      .eq("id", guestId);
   }
 
   const { data: submission, error: insertError } = await supabase
     .from("rsvp_submissions")
     .insert({
       event_id: event.id,
-      guest_id: guest.id,
+      guest_id: guestId,
       submitted_full_name: displayName,
       normalized_submitted_name: normalized,
       attendance_choice: input.attending,
       optional_contact: contact,
-      matching_state: "linked",
-      review_status: "linked",
+      matching_state: matchingState,
+      review_status: "pending_review",
       consent_version: CONSENT_VERSION,
       request_fingerprint_hash: ipHash,
-      suggested_guest_ids: [guest.id],
-      reviewed_at: new Date().toISOString(),
+      suggested_guest_ids: guestId ? [guestId] : [],
       receipt_token_hash: receiptHash,
       idempotency_key: input.idempotencyKey ?? null,
       bringing_companion: bringingCompanion,
@@ -286,53 +274,27 @@ export async function POST(request: Request) {
     );
   }
 
-  const { data: before } = await supabase.from("guests").select("*").eq("id", guest.id).single();
-  const { error: updateError } = await supabase
-    .from("guests")
-    .update({
-      display_name: displayName,
-      normalized_name: normalized,
-      official_status: nextStatus,
-      confirmation_source: confirmationSource,
-      preferred_contact: contact ?? before?.preferred_contact,
-      bringing_companion: bringingCompanion,
-      companion_name: companionName,
-      companion_is_child: companionIsChild,
-    })
-    .eq("id", guest.id);
-
-  if (updateError) {
-    return NextResponse.json(
-      { message: "Não foi possível enviar agora. Confira sua conexão e tente novamente." },
-      { status: 500 },
-    );
-  }
-
   await supabase.from("rsvp_audit_log").insert({
-    guest_id: guest.id,
+    guest_id: guestId,
     submission_id: submission.id,
     actor_type: "guest",
-    action: token
-      ? "confirm_via_token"
-      : linkedFromList
-        ? "confirm_via_list"
-        : "confirm_via_form_open",
-    before_json: before,
+    action: "submit_pending_review",
     after_json: {
-      official_status: nextStatus,
       attendance_choice: input.attending,
       bringing_companion: bringingCompanion,
       companion_name: companionName,
       companion_is_child: companionIsChild,
       companion_counts: companionCounts(bringingCompanion, companionIsChild),
+      pending_review: true,
     },
   });
 
   return NextResponse.json({
     message: input.attending
-      ? "Que alegria ter você com a gente."
-      : "Vamos sentir sua falta, mas agradecemos por nos avisar.",
-    validated: true,
+      ? "Recebemos sua confirmação. Em breve validamos sua presença."
+      : "Recebemos seu aviso. Obrigado por nos contar.",
+    validated: false,
+    pendingReview: true,
     attending: input.attending,
     receipt,
   });
