@@ -3,8 +3,8 @@ import { DEFAULT_EVENT, formatRsvpDeadline, rsvpDeadlinePassed } from "@/lib/eve
 import { ALL_SEED_GUESTS } from "@/lib/rsvp/guest-seed";
 import { canUseLocalRsvp, listedGuestsForMatching, saveLocalRsvp } from "@/lib/rsvp/local-store";
 import {
-  RESPONDED_STATUSES,
   companionCounts,
+  guestMayConfirmViaForm,
   resolveListedGuest,
 } from "@/lib/rsvp/matching";
 import { normalizeName } from "@/lib/rsvp/normalize";
@@ -78,16 +78,21 @@ export async function POST(request: Request) {
   if (!supabaseReady) {
     const listed = listedGuestsForMatching();
     const localMatch = resolveListedGuest(input.fullName, listed);
-    if (!localMatch.ok) {
-      return NextResponse.json({ message: RSVP_MESSAGES[localMatch.code] }, { status: 400 });
+    if (localMatch.ok === false && localMatch.code === "ambiguous") {
+      return NextResponse.json({ message: RSVP_MESSAGES.ambiguous }, { status: 400 });
     }
-    const seed = ALL_SEED_GUESTS.find((guest) => guest.seedKey === localMatch.guest.id);
-    if (seed && RESPONDED_STATUSES.has(seed.officialStatus)) {
+    const seed = localMatch.ok
+      ? ALL_SEED_GUESTS.find((guest) => guest.seedKey === localMatch.guest.id)
+      : undefined;
+    if (
+      seed &&
+      !guestMayConfirmViaForm(seed.officialStatus, seed.confirmationSource)
+    ) {
       return NextResponse.json({ message: RSVP_MESSAGES.already }, { status: 409 });
     }
     const saved = await saveLocalRsvp({
-      guestSeedKey: localMatch.guest.id,
-      guestDisplayName: localMatch.guest.displayName,
+      guestSeedKey: localMatch.ok ? localMatch.guest.id : `walk-in:${normalizeName(input.fullName)}`,
+      guestDisplayName: localMatch.ok ? localMatch.guest.displayName : input.fullName.trim(),
       fullName: input.fullName.trim(),
       attending: input.attending,
       contact,
@@ -130,7 +135,9 @@ export async function POST(request: Request) {
 
   const { data: guests } = await supabase
     .from("guests")
-    .select("id, display_name, normalized_name, invite_token_hash, official_status")
+    .select(
+      "id, display_name, normalized_name, invite_token_hash, official_status, confirmation_source, group_owner",
+    )
     .eq("event_id", event.id)
     .is("deleted_at", null);
 
@@ -140,6 +147,8 @@ export async function POST(request: Request) {
     normalizedName: guest.normalized_name as string,
     inviteTokenHash: guest.invite_token_hash as string | null,
     officialStatus: guest.official_status as string,
+    confirmationSource: guest.confirmation_source as string,
+    groupOwner: guest.group_owner as "Alex" | "Paloma",
   }));
 
   let matched = resolveListedGuest(input.fullName, guestList);
@@ -151,16 +160,22 @@ export async function POST(request: Request) {
     }
   }
 
-  if (!matched.ok) {
-    return NextResponse.json({ message: RSVP_MESSAGES[matched.code] }, { status: 400 });
+  if (!matched.ok && matched.code === "ambiguous") {
+    return NextResponse.json({ message: RSVP_MESSAGES.ambiguous }, { status: 400 });
   }
 
-  const guest = guestList.find((entry) => entry.id === matched.guest.id) ?? {
-    ...matched.guest,
-    officialStatus: "awaiting_response",
-  };
+  let guest =
+    matched.ok
+      ? (guestList.find((entry) => entry.id === matched.guest.id) ?? {
+          ...matched.guest,
+          inviteTokenHash: null,
+          officialStatus: "awaiting_response",
+          confirmationSource: "import",
+          groupOwner: "Alex" as const,
+        })
+      : null;
 
-  if (RESPONDED_STATUSES.has(guest.officialStatus)) {
+  if (guest && !guestMayConfirmViaForm(guest.officialStatus, guest.confirmationSource)) {
     return NextResponse.json({ message: RSVP_MESSAGES.already }, { status: 409 });
   }
 
@@ -181,33 +196,86 @@ export async function POST(request: Request) {
     }
   }
 
-  const [{ data: priorByGuest }, { data: priorByName }] = await Promise.all([
-    supabase
+  if (guest) {
+    const [{ data: priorByGuest }, { data: priorByName }] = await Promise.all([
+      supabase
+        .from("rsvp_submissions")
+        .select("id")
+        .eq("event_id", event.id)
+        .eq("guest_id", guest.id)
+        .neq("review_status", "discarded")
+        .limit(1),
+      supabase
+        .from("rsvp_submissions")
+        .select("id")
+        .eq("event_id", event.id)
+        .eq("normalized_submitted_name", guest.normalizedName)
+        .neq("review_status", "discarded")
+        .limit(1),
+    ]);
+    if ((priorByGuest && priorByGuest.length > 0) || (priorByName && priorByName.length > 0)) {
+      return NextResponse.json({ message: RSVP_MESSAGES.already }, { status: 409 });
+    }
+  } else {
+    const { data: priorByName } = await supabase
       .from("rsvp_submissions")
       .select("id")
       .eq("event_id", event.id)
-      .eq("guest_id", guest.id)
+      .eq("normalized_submitted_name", normalized)
       .neq("review_status", "discarded")
-      .limit(1),
-    supabase
-      .from("rsvp_submissions")
-      .select("id")
-      .eq("event_id", event.id)
-      .eq("normalized_submitted_name", guest.normalizedName)
-      .neq("review_status", "discarded")
-      .limit(1),
-  ]);
-  if ((priorByGuest && priorByGuest.length > 0) || (priorByName && priorByName.length > 0)) {
-    return NextResponse.json({ message: RSVP_MESSAGES.already }, { status: 409 });
+      .limit(1);
+    if (priorByName && priorByName.length > 0) {
+      return NextResponse.json({ message: RSVP_MESSAGES.already }, { status: 409 });
+    }
   }
 
   const nextStatus = input.attending ? "confirmed_via_token" : "declined";
+  const confirmationSource = token ? "personal_link" : "public_form";
+  const displayName = input.fullName.trim();
+
+  if (!guest) {
+    const { data: created, error: createError } = await supabase
+      .from("guests")
+      .insert({
+        event_id: event.id,
+        group_owner: "Alex",
+        display_name: displayName,
+        normalized_name: normalized,
+        official_status: nextStatus,
+        confirmation_source: confirmationSource,
+        preferred_contact: contact,
+        bringing_companion: bringingCompanion,
+        companion_name: companionName,
+        companion_is_child: companionIsChild,
+        notes: "Cadastro pelo formulário",
+      })
+      .select("id, display_name, normalized_name, official_status, confirmation_source, group_owner")
+      .single();
+
+    if (createError || !created) {
+      return NextResponse.json(
+        { message: "Não foi possível enviar agora. Confira sua conexão e tente novamente." },
+        { status: 500 },
+      );
+    }
+
+    guest = {
+      id: created.id as string,
+      displayName: created.display_name as string,
+      normalizedName: created.normalized_name as string,
+      inviteTokenHash: null,
+      officialStatus: created.official_status as string,
+      confirmationSource: created.confirmation_source as string,
+      groupOwner: created.group_owner as "Alex" | "Paloma",
+    };
+  }
+
   const { data: submission, error: insertError } = await supabase
     .from("rsvp_submissions")
     .insert({
       event_id: event.id,
       guest_id: guest.id,
-      submitted_full_name: input.fullName.trim(),
+      submitted_full_name: displayName,
       normalized_submitted_name: normalized,
       attendance_choice: input.attending,
       optional_contact: contact,
@@ -234,11 +302,11 @@ export async function POST(request: Request) {
   }
 
   const { data: before } = await supabase.from("guests").select("*").eq("id", guest.id).single();
-  await supabase
+  const { error: updateError } = await supabase
     .from("guests")
     .update({
       official_status: nextStatus,
-      confirmation_source: token ? "personal_link" : "public_form",
+      confirmation_source: confirmationSource,
       preferred_contact: contact ?? before?.preferred_contact,
       bringing_companion: bringingCompanion,
       companion_name: companionName,
@@ -246,11 +314,18 @@ export async function POST(request: Request) {
     })
     .eq("id", guest.id);
 
+  if (updateError) {
+    return NextResponse.json(
+      { message: "Não foi possível enviar agora. Confira sua conexão e tente novamente." },
+      { status: 500 },
+    );
+  }
+
   await supabase.from("rsvp_audit_log").insert({
     guest_id: guest.id,
     submission_id: submission.id,
     actor_type: "guest",
-    action: token ? "confirm_via_token" : "confirm_via_list",
+    action: token ? "confirm_via_token" : matched.ok ? "confirm_via_list" : "confirm_via_form_walk_in",
     before_json: before,
     after_json: {
       official_status: nextStatus,

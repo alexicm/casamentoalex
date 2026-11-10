@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { PALOMA_GUESTS } from "@/lib/rsvp/guest-seed";
-import { companionCounts, resolveListedGuest, suggestMatches } from "@/lib/rsvp/matching";
+import {
+  companionCounts,
+  guestMayConfirmViaForm,
+  resolveListedGuest,
+  suggestMatches,
+} from "@/lib/rsvp/matching";
 import { normalizeName } from "@/lib/rsvp/normalize";
 import { companionLabel, guestConfirmedViaSite, guestSeatCount } from "@/lib/rsvp/seats";
 
@@ -86,5 +91,12 @@ describe("sugestão interna de nomes", () => {
         confirmationSource: "import",
       }),
     ).toBe(false);
+  });
+
+  it("permite a lista histórica confirmar pelo formulário", () => {
+    expect(guestMayConfirmViaForm("awaiting_response", "import")).toBe(true);
+    expect(guestMayConfirmViaForm("manually_confirmed", "import")).toBe(true);
+    expect(guestMayConfirmViaForm("confirmed_via_token", "public_form")).toBe(false);
+    expect(guestMayConfirmViaForm("declined", "public_form")).toBe(false);
   });
 });

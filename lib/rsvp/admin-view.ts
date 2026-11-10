@@ -50,7 +50,7 @@ export function toAdminGuest(row: {
 
 export function mergeLocalGuestList(submissions: LocalSubmission[]): AdminGuest[] {
   const byKey = new Map(submissions.map((row) => [row.guestSeedKey, row]));
-  return ALL_SEED_GUESTS.map((guest) => {
+  const fromSeed = ALL_SEED_GUESTS.map((guest) => {
     const local = byKey.get(guest.seedKey);
     return {
       id: guest.seedKey,
@@ -71,6 +71,23 @@ export function mergeLocalGuestList(submissions: LocalSubmission[]): AdminGuest[
       companion_is_child: local?.companionIsChild ?? false,
     };
   });
+  const walkIns = submissions
+    .filter((row) => row.guestSeedKey.startsWith("walk-in:"))
+    .map((row) => ({
+      id: row.guestSeedKey,
+      display_name: row.guestDisplayName || row.fullName,
+      group_owner: "Alex" as const,
+      official_status: row.attending ? "confirmed_via_token" : "declined",
+      confirmation_source: "public_form",
+      preferred_contact: row.contact,
+      notes: "Cadastro pelo formulário",
+      updated_at: row.createdAt,
+      seed_key: row.guestSeedKey,
+      bringing_companion: row.bringingCompanion,
+      companion_name: row.companionName,
+      companion_is_child: row.companionIsChild,
+    }));
+  return [...fromSeed, ...walkIns];
 }
 
 export function computeGuestStats(list: AdminGuest[]) {

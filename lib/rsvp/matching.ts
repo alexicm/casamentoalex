@@ -67,6 +67,13 @@ export const RESPONDED_STATUSES = new Set([
   "declined",
 ]);
 
+/** Quem ainda pode confirmar pelo formulário (lista histórica importada conta). */
+export function guestMayConfirmViaForm(status: string, source: string) {
+  if (status === "awaiting_response") return true;
+  if (status === "manually_confirmed" && source === "import") return true;
+  return false;
+}
+
 export function resolveListedGuest(
   submittedName: string,
   guests: MatchableGuest[],
