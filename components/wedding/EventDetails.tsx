@@ -70,7 +70,9 @@ export function EventDetails({ event }: EventDetailsProps) {
           </p>
           {formatRsvpDeadline(event.rsvpDeadline) ? (
             <p className="mt-3 text-sm leading-relaxed text-ink/70">
-              Confirmação até {formatRsvpDeadline(event.rsvpDeadline)}.
+              Confirmação até {formatRsvpDeadline(event.rsvpDeadline)}. Se
+              levar convidado, informe o nome. Criança até 10 anos não conta
+              lugar.
             </p>
           ) : null}
           <div className="hairline my-6" />

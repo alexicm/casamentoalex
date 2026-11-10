@@ -137,9 +137,14 @@ export function RSVPForm({ event, inviteToken, setupPending }: RSVPFormProps) {
           </p>
         ) : null}
         <p className="mx-auto mt-3 max-w-md text-center text-[0.98rem] leading-relaxed text-ink/80">
-          Escreva seu nome e envie uma vez. Nós validamos cada confirmação
-          depois. Se for levar alguém, diga o nome. Criança até 10 anos vem
-          junto, mas não ocupa lugar extra.
+          Qualquer pessoa pode confirmar. Escreva seu nome e, se for levar
+          convidado, coloque o nome dele também. Nós validamos depois.
+        </p>
+        <p className="mx-auto mt-3 max-w-md rounded-[16px] border border-olive/15 bg-[#f7f1e7] px-4 py-3 text-center text-sm leading-relaxed text-ink/80">
+          <span className="font-medium text-burgundy">Importante:</span> criança
+          de até 10 anos é bem-vinda e deve ser informada, mas{" "}
+          <span className="font-medium text-burgundy">não conta como lugar</span>{" "}
+          na mesa.
         </p>
 
         {setupPending ? (
@@ -186,8 +191,11 @@ export function RSVPForm({ event, inviteToken, setupPending }: RSVPFormProps) {
         {attending ? (
           <fieldset className="mt-8 grid gap-3">
             <legend className="mb-1 text-[0.7rem] tracking-[0.18em] text-olive uppercase">
-              Vai levar alguém?
+              Vai levar convidado?
             </legend>
+            <p className="mb-1 text-sm leading-relaxed text-ink/65">
+              Se levar alguém, o nome dele também entra na confirmação.
+            </p>
             <Choice
               selected={!bringingCompanion}
               onSelect={() => {
@@ -202,16 +210,16 @@ export function RSVPForm({ event, inviteToken, setupPending }: RSVPFormProps) {
               selected={bringingCompanion}
               onSelect={() => setBringingCompanion(true)}
               title="Sim, vou levar alguém"
-              note="Precisamos do nome. Criança até 10 anos não conta lugar."
+              note="Adulto conta lugar. Criança até 10 anos não conta."
             />
           </fieldset>
         ) : null}
 
         {attending && bringingCompanion ? (
-          <div className="mt-6">
+          <div className="mt-6 rounded-[18px] border border-olive/15 bg-[#fbf6ee] px-4 py-5">
             <label className="block">
               <span className="mb-1 block text-[0.7rem] tracking-[0.18em] text-olive uppercase">
-                Nome de quem vem com você
+                Nome do convidado
               </span>
               <input
                 required
@@ -219,19 +227,32 @@ export function RSVPForm({ event, inviteToken, setupPending }: RSVPFormProps) {
                 autoComplete="off"
                 value={companionName}
                 onChange={(event) => setCompanionName(event.target.value)}
-                placeholder="Nome completo de quem acompanha"
+                placeholder="Nome de quem vem com você"
                 className="letter-field focus-ring min-h-12 w-full bg-transparent px-1 text-lg text-ink"
               />
             </label>
-            <label className="mt-4 flex items-start gap-3 text-sm leading-relaxed text-ink/75">
+            <label className="mt-4 flex items-start gap-3 text-sm leading-relaxed text-ink/80">
               <input
                 type="checkbox"
                 checked={companionIsChild}
                 onChange={(event) => setCompanionIsChild(event.target.checked)}
                 className="mt-1 h-5 w-5 accent-burgundy"
               />
-              É criança de até 10 anos: vem junto, mas não ocupa lugar extra.
+              <span>
+                É criança de até 10 anos. Pode vir, mas{" "}
+                <span className="font-medium text-burgundy">não conta lugar</span>{" "}
+                na mesa.
+              </span>
             </label>
+            {companionIsChild ? (
+              <p className="mt-3 text-sm leading-relaxed text-ink/65">
+                Combinado: a criança entra na lista e não ocupa assento extra.
+              </p>
+            ) : (
+              <p className="mt-3 text-sm leading-relaxed text-ink/65">
+                Se for adulto, vamos reservar um lugar a mais.
+              </p>
+            )}
           </div>
         ) : null}
 
