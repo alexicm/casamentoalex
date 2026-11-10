@@ -95,23 +95,33 @@ export function suggestMatches(
   }
 
   const tokenIndex = uniqueTokenIndex(guests);
-  const hits = new Map<string, MatchableGuest>();
+  const scores = new Map<string, { guest: MatchableGuest; score: number }>();
   for (const submittedToken of nameTokens(normalized)) {
     const owners = tokenIndex.get(submittedToken) ?? [];
     if (owners.length !== 1 || !owners[0]) continue;
-    hits.set(owners[0].id, owners[0]);
+    const current = scores.get(owners[0].id);
+    const nextScore = (current?.score ?? 0) + submittedToken.length;
+    scores.set(owners[0].id, { guest: owners[0], score: nextScore });
   }
-  if (hits.size === 1) {
+  const ranked = [...scores.values()].sort((a, b) => b.score - a.score);
+  if (ranked.length === 1 && ranked[0]) {
     return {
       state: "suggested",
-      candidates: [...hits.values()],
+      candidates: [ranked[0].guest],
       reason: "unique-token",
     };
   }
-  if (hits.size > 1) {
+  if (ranked.length > 1 && ranked[0] && ranked[1] && ranked[0].score > ranked[1].score) {
+    return {
+      state: "suggested",
+      candidates: [ranked[0].guest],
+      reason: "unique-token-score",
+    };
+  }
+  if (ranked.length > 1) {
     return {
       state: "ambiguous",
-      candidates: [...hits.values()],
+      candidates: ranked.map((row) => row.guest),
       reason: "multi-token-hit",
     };
   }
