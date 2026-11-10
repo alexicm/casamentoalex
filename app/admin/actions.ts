@@ -76,6 +76,91 @@ export async function updateGuestListOwner(
   revalidatePath("/admin/dashboard");
 }
 
+export async function updateConfirmedGuest(input: {
+  guestId: string;
+  displayName: string;
+  groupOwner: "Alex" | "Paloma";
+  preferredContact: string;
+  bringingCompanion: boolean;
+  companionName: string;
+  companionIsChild: boolean;
+}) {
+  const admin = await requireAdmin();
+  const service = createServiceClient();
+  const displayName = input.displayName.trim();
+  if (displayName.length < 2) throw new Error("NAME_REQUIRED");
+
+  const bringingCompanion = Boolean(input.bringingCompanion);
+  const companionIsChild = Boolean(bringingCompanion && input.companionIsChild);
+  const companionName = bringingCompanion ? input.companionName.trim() || null : null;
+  if (bringingCompanion && (!companionName || companionName.length < 2)) {
+    throw new Error("COMPANION_REQUIRED");
+  }
+
+  const { data: before } = await service.from("guests").select("*").eq("id", input.guestId).single();
+  if (!before) throw new Error("GUEST_NOT_FOUND");
+
+  const after = {
+    display_name: displayName,
+    normalized_name: normalizeName(displayName),
+    group_owner: input.groupOwner,
+    preferred_contact: input.preferredContact.trim() || null,
+    bringing_companion: bringingCompanion,
+    companion_name: companionName,
+    companion_is_child: companionIsChild,
+    notes: "Editado no painel",
+  };
+
+  const { error } = await service.from("guests").update(after).eq("id", input.guestId);
+  if (error) throw new Error(error.message);
+
+  await service.from("rsvp_audit_log").insert({
+    guest_id: input.guestId,
+    actor_type: "admin",
+    actor_id: admin.id || null,
+    action: "edit_confirmed_guest",
+    before_json: before,
+    after_json: after,
+  });
+  revalidatePath("/admin/dashboard");
+}
+
+export async function deleteConfirmedGuest(guestId: string) {
+  const admin = await requireAdmin();
+  const service = createServiceClient();
+  const { data: before } = await service.from("guests").select("*").eq("id", guestId).single();
+  if (!before) throw new Error("GUEST_NOT_FOUND");
+
+  const { error } = await service
+    .from("guests")
+    .update({
+      deleted_at: new Date().toISOString(),
+      notes: "Removido da lista confirmada no painel",
+    })
+    .eq("id", guestId);
+  if (error) throw new Error(error.message);
+
+  await service
+    .from("rsvp_submissions")
+    .update({
+      review_status: "discarded",
+      reviewed_at: new Date().toISOString(),
+      reviewer_id: admin.id || null,
+    })
+    .eq("guest_id", guestId)
+    .neq("review_status", "discarded");
+
+  await service.from("rsvp_audit_log").insert({
+    guest_id: guestId,
+    actor_type: "admin",
+    actor_id: admin.id || null,
+    action: "delete_confirmed_guest",
+    before_json: before,
+    after_json: { deleted: true },
+  });
+  revalidatePath("/admin/dashboard");
+}
+
 export async function approveSubmission(
   submissionId: string,
   groupOwner: "Alex" | "Paloma" = "Alex",

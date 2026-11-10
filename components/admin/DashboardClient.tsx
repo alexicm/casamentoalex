@@ -4,9 +4,10 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import {
   approveSubmission,
+  deleteConfirmedGuest,
   discardSubmission,
   signOut,
-  updateGuestListOwner,
+  updateConfirmedGuest,
 } from "@/app/admin/actions";
 import type { AdminGuest } from "@/lib/rsvp/admin-view";
 import { companionLabel, guestConfirmedViaSite } from "@/lib/rsvp/seats";
@@ -35,6 +36,15 @@ type EventRow = {
   dress_code_json: { title?: string; subtitle?: string };
 };
 
+type EditDraft = {
+  displayName: string;
+  groupOwner: "Alex" | "Paloma";
+  preferredContact: string;
+  bringingCompanion: boolean;
+  companionName: string;
+  companionIsChild: boolean;
+};
+
 type DashboardClientProps = {
   event: EventRow;
   guests: Guest[];
@@ -55,6 +65,17 @@ type DashboardClientProps = {
   localMode?: boolean;
 };
 
+function draftFromGuest(guest: Guest): EditDraft {
+  return {
+    displayName: guest.display_name,
+    groupOwner: guest.group_owner,
+    preferredContact: guest.preferred_contact ?? "",
+    bringingCompanion: guest.bringing_companion,
+    companionName: guest.companion_name ?? "",
+    companionIsChild: guest.companion_is_child,
+  };
+}
+
 export function DashboardClient({
   guests,
   submissions,
@@ -66,7 +87,8 @@ export function DashboardClient({
   const [owner, setOwner] = useState("all");
   const [pending, startTransition] = useTransition();
   const [owners, setOwners] = useState<Record<string, "Alex" | "Paloma">>({});
-  const [guestOwners, setGuestOwners] = useState<Record<string, "Alex" | "Paloma">>({});
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<EditDraft | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   const confirmed = useMemo(
@@ -123,6 +145,17 @@ export function DashboardClient({
       router.refresh();
       setStatusMessage("Painel atualizado.");
     });
+  }
+
+  function startEdit(guest: Guest) {
+    setEditingId(guest.id);
+    setDraft(draftFromGuest(guest));
+    setStatusMessage(null);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setDraft(null);
   }
 
   return (
@@ -283,7 +316,7 @@ export function DashboardClient({
               <p className="text-sm text-ink/70">
                 {filtered.length}{" "}
                 {filtered.length === 1 ? "pessoa validada" : "pessoas validadas"} ·
-                dá para mudar a lista e salvar
+                dá para editar ou apagar
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -316,72 +349,193 @@ export function DashboardClient({
               Ainda ninguém foi validado pelo painel.
             </p>
           ) : (
-            <div className="mt-4 overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead>
-                  <tr className="text-olive">
-                    <th className="py-2 pr-3">Nome</th>
-                    <th className="py-2 pr-3">Lista</th>
-                    <th className="py-2 pr-3">Acompanhante</th>
-                    <th className="py-2 pr-3">Contato</th>
-                    <th className="py-2">Ação</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((guest) => {
-                    const selected =
-                      guestOwners[guest.id] ?? guest.group_owner;
-                    const dirty = selected !== guest.group_owner;
-                    return (
-                      <tr key={guest.id} className="border-t border-olive/10">
-                        <td className="py-3 pr-3 font-medium">{guest.display_name}</td>
-                        <td className="py-3 pr-3">
-                          <select
-                            value={selected}
-                            onChange={(event) =>
-                              setGuestOwners((current) => ({
-                                ...current,
-                                [guest.id]: event.target.value as "Alex" | "Paloma",
-                              }))
-                            }
-                            className="focus-ring min-h-10 rounded-full border border-olive/20 px-3"
-                            aria-label={`Lista de ${guest.display_name}`}
-                          >
-                            <option value="Alex">Alex</option>
-                            <option value="Paloma">Paloma</option>
-                          </select>
-                        </td>
-                        <td className="py-3 pr-3">
-                          {companionLabel({
-                            officialStatus: guest.official_status,
-                            confirmationSource: guest.confirmation_source,
-                            bringingCompanion: guest.bringing_companion,
-                            companionName: guest.companion_name,
-                            companionIsChild: guest.companion_is_child,
-                          })}
-                        </td>
-                        <td className="py-3 pr-3">{guest.preferred_contact ?? "-"}</td>
-                        <td className="py-3">
+            <ul className="mt-5 space-y-4">
+              {filtered.map((guest) => {
+                const isEditing = editingId === guest.id && draft;
+                return (
+                  <li
+                    key={guest.id}
+                    className="rounded-[20px] border border-olive/10 bg-paper px-4 py-4"
+                  >
+                    {isEditing ? (
+                      <div className="grid gap-3">
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <label className="block text-sm">
+                            <span className="mb-1 block text-ink/60">Nome</span>
+                            <input
+                              value={draft.displayName}
+                              onChange={(event) =>
+                                setDraft({ ...draft, displayName: event.target.value })
+                              }
+                              className="focus-ring min-h-11 w-full rounded-full border border-olive/20 px-4"
+                            />
+                          </label>
+                          <label className="block text-sm">
+                            <span className="mb-1 block text-ink/60">Lista</span>
+                            <select
+                              value={draft.groupOwner}
+                              onChange={(event) =>
+                                setDraft({
+                                  ...draft,
+                                  groupOwner: event.target.value as "Alex" | "Paloma",
+                                })
+                              }
+                              className="focus-ring min-h-11 w-full rounded-full border border-olive/20 px-4"
+                            >
+                              <option value="Alex">Alex</option>
+                              <option value="Paloma">Paloma</option>
+                            </select>
+                          </label>
+                          <label className="block text-sm">
+                            <span className="mb-1 block text-ink/60">Contato</span>
+                            <input
+                              value={draft.preferredContact}
+                              onChange={(event) =>
+                                setDraft({
+                                  ...draft,
+                                  preferredContact: event.target.value,
+                                })
+                              }
+                              className="focus-ring min-h-11 w-full rounded-full border border-olive/20 px-4"
+                            />
+                          </label>
+                          <label className="block text-sm">
+                            <span className="mb-1 block text-ink/60">Acompanhante</span>
+                            <select
+                              value={draft.bringingCompanion ? "yes" : "no"}
+                              onChange={(event) => {
+                                const bringingCompanion = event.target.value === "yes";
+                                setDraft({
+                                  ...draft,
+                                  bringingCompanion,
+                                  companionName: bringingCompanion ? draft.companionName : "",
+                                  companionIsChild: bringingCompanion
+                                    ? draft.companionIsChild
+                                    : false,
+                                });
+                              }}
+                              className="focus-ring min-h-11 w-full rounded-full border border-olive/20 px-4"
+                            >
+                              <option value="no">Vem sozinho(a)</option>
+                              <option value="yes">Leva acompanhante</option>
+                            </select>
+                          </label>
+                        </div>
+                        {draft.bringingCompanion ? (
+                          <div className="grid gap-3 md:grid-cols-2">
+                            <label className="block text-sm">
+                              <span className="mb-1 block text-ink/60">
+                                Nome do acompanhante
+                              </span>
+                              <input
+                                value={draft.companionName}
+                                onChange={(event) =>
+                                  setDraft({
+                                    ...draft,
+                                    companionName: event.target.value,
+                                  })
+                                }
+                                className="focus-ring min-h-11 w-full rounded-full border border-olive/20 px-4"
+                              />
+                            </label>
+                            <label className="flex min-h-11 items-end gap-2 pb-3 text-sm">
+                              <input
+                                type="checkbox"
+                                checked={draft.companionIsChild}
+                                onChange={(event) =>
+                                  setDraft({
+                                    ...draft,
+                                    companionIsChild: event.target.checked,
+                                  })
+                                }
+                              />
+                              <span>Criança até 10 anos (não conta lugar)</span>
+                            </label>
+                          </div>
+                        ) : null}
+                        <div className="flex flex-wrap gap-2">
                           <button
                             type="button"
-                            disabled={pending || !dirty}
+                            disabled={pending}
                             onClick={() =>
-                              run(
-                                () => updateGuestListOwner(guest.id, selected),
-                                `${guest.display_name} movido para lista ${selected}.`,
-                              )
+                              run(async () => {
+                                await updateConfirmedGuest({
+                                  guestId: guest.id,
+                                  displayName: draft.displayName,
+                                  groupOwner: draft.groupOwner,
+                                  preferredContact: draft.preferredContact,
+                                  bringingCompanion: draft.bringingCompanion,
+                                  companionName: draft.companionName,
+                                  companionIsChild: draft.companionIsChild,
+                                });
+                                cancelEdit();
+                              }, `${draft.displayName} atualizado.`)
                             }
-                            className="focus-ring min-h-10 rounded-full border border-olive/20 px-3 text-sm disabled:opacity-40"
+                            className="focus-ring min-h-11 rounded-full bg-olive px-4 text-sm text-paper-light disabled:opacity-60"
                           >
-                            Salvar
+                            Salvar alterações
                           </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                          <button
+                            type="button"
+                            disabled={pending}
+                            onClick={cancelEdit}
+                            className="focus-ring min-h-11 rounded-full border border-olive/20 px-4 text-sm disabled:opacity-60"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                        <div>
+                          <p className="font-medium text-ink">{guest.display_name}</p>
+                          <p className="mt-1 text-sm text-ink/70">
+                            Lista {guest.group_owner} ·{" "}
+                            {companionLabel({
+                              officialStatus: guest.official_status,
+                              confirmationSource: guest.confirmation_source,
+                              bringingCompanion: guest.bringing_companion,
+                              companionName: guest.companion_name,
+                              companionIsChild: guest.companion_is_child,
+                            })}
+                          </p>
+                          <p className="mt-1 text-sm text-ink/55">
+                            Contato: {guest.preferred_contact ?? "-"}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            disabled={pending}
+                            onClick={() => startEdit(guest)}
+                            className="focus-ring min-h-11 rounded-full border border-olive/20 px-4 text-sm disabled:opacity-60"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            disabled={pending}
+                            onClick={() => {
+                              const ok = window.confirm(
+                                `Apagar ${guest.display_name} da lista confirmada?`,
+                              );
+                              if (!ok) return;
+                              run(
+                                () => deleteConfirmedGuest(guest.id),
+                                `${guest.display_name} apagado.`,
+                              );
+                            }}
+                            className="focus-ring min-h-11 rounded-full border border-olive/20 px-4 text-sm text-wine-soft disabled:opacity-60"
+                          >
+                            Apagar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
           )}
 
           {declined.length > 0 ? (
