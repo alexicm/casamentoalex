@@ -61,9 +61,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const receipt = input.idempotencyKey
-    ? input.idempotencyKey.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 48) || createReceiptToken()
-    : createReceiptToken();
+  const receipt = createReceiptToken();
   const receiptHash = hashReceiptToken(receipt);
   const contact = input.contact?.trim() || null;
   const bringingCompanion = Boolean(input.attending && input.bringingCompanion);
@@ -71,6 +69,7 @@ export async function POST(request: Request) {
   const companionName = bringingCompanion ? input.companionName?.trim() || null : null;
   const displayName = input.fullName.trim();
   const normalized = normalizeName(displayName);
+  const idempotencyKey = input.idempotencyKey?.trim() || null;
 
   if (!supabaseReady) {
     const saved = await saveLocalRsvp({
@@ -81,7 +80,7 @@ export async function POST(request: Request) {
       contact,
       receipt,
       receiptHash,
-      idempotencyKey: input.idempotencyKey ?? null,
+      idempotencyKey,
       bringingCompanion,
       companionName,
       companionIsChild,
@@ -114,8 +113,37 @@ export async function POST(request: Request) {
     );
   }
 
-  const token = input.inviteToken?.trim() || "";
+  if (idempotencyKey) {
+    const { data: existing } = await supabase
+      .from("rsvp_submissions")
+      .select("id, attendance_choice, review_status")
+      .eq("event_id", event.id)
+      .eq("idempotency_key", idempotencyKey)
+      .neq("review_status", "discarded")
+      .maybeSingle();
+    if (existing) {
+      return NextResponse.json({
+        message: "Recebemos sua resposta com carinho. Obrigado por nos contar!",
+        validated: false,
+        pendingReview: existing.review_status === "pending_review",
+        attending: existing.attendance_choice,
+        receipt,
+      });
+    }
+  }
 
+  const { data: priorByName } = await supabase
+    .from("rsvp_submissions")
+    .select("id")
+    .eq("event_id", event.id)
+    .eq("normalized_submitted_name", normalized)
+    .neq("review_status", "discarded")
+    .limit(1);
+  if (priorByName && priorByName.length > 0) {
+    return NextResponse.json({ message: RSVP_MESSAGES.already }, { status: 409 });
+  }
+
+  const token = input.inviteToken?.trim() || "";
   const { data: guests } = await supabase
     .from("guests")
     .select(
@@ -134,76 +162,38 @@ export async function POST(request: Request) {
     groupOwner: guest.group_owner as "Alex" | "Paloma",
   }));
 
-  let matched = resolveListedGuest(input.fullName, guestList);
+  let tokenGuestId: string | null = null;
   if (token) {
     const hashed = hashInviteToken(token);
     const tokenGuest = guestList.find((guest) => guest.inviteTokenHash === hashed);
-    if (tokenGuest) {
-      matched = { ok: true, guest: tokenGuest };
-    }
+    if (tokenGuest) tokenGuestId = tokenGuest.id;
   }
 
-  const linkedGuest =
-    matched.ok
-      ? (guestList.find((entry) => entry.id === matched.guest.id) ?? null)
-      : null;
+  // Sugestão só para o painel; cadastro público sempre cria pendência nova,
+  // exceto link pessoal com token.
+  const softMatch = resolveListedGuest(input.fullName, guestList);
+  const suggestedIds =
+    softMatch.ok && softMatch.guest.id !== tokenGuestId
+      ? [softMatch.guest.id]
+      : tokenGuestId
+        ? [tokenGuestId]
+        : softMatch.ok
+          ? [softMatch.guest.id]
+          : [];
 
-  if (
-    linkedGuest &&
-    (linkedGuest.officialStatus === "confirmed_via_token" ||
-      (linkedGuest.officialStatus === "declined" &&
-        linkedGuest.confirmationSource !== "import"))
-  ) {
-    return NextResponse.json({ message: RSVP_MESSAGES.already }, { status: 409 });
-  }
-
-  if (input.idempotencyKey) {
-    const { data: existing } = await supabase
-      .from("rsvp_submissions")
-      .select("id, attendance_choice, review_status")
-      .eq("event_id", event.id)
-      .eq("idempotency_key", input.idempotencyKey)
-      .maybeSingle();
-    if (existing) {
-      return NextResponse.json({
-        message: "Recebemos sua resposta com carinho. Obrigado por nos contar!",
-        validated: false,
-        pendingReview: true,
-        attending: existing.attendance_choice,
-        receipt,
-      });
-    }
-  }
-
-  const { data: priorByName } = await supabase
-    .from("rsvp_submissions")
-    .select("id")
-    .eq("event_id", event.id)
-    .eq("normalized_submitted_name", normalized)
-    .neq("review_status", "discarded")
-    .limit(1);
-  if (priorByName && priorByName.length > 0) {
-    return NextResponse.json({ message: RSVP_MESSAGES.already }, { status: 409 });
-  }
-
-  if (linkedGuest) {
-    const { data: priorByGuest } = await supabase
-      .from("rsvp_submissions")
-      .select("id")
-      .eq("event_id", event.id)
-      .eq("guest_id", linkedGuest.id)
-      .neq("review_status", "discarded")
-      .limit(1);
-    if (priorByGuest && priorByGuest.length > 0) {
+  if (tokenGuestId) {
+    const tokenGuest = guestList.find((guest) => guest.id === tokenGuestId);
+    if (
+      tokenGuest &&
+      (tokenGuest.officialStatus === "confirmed_via_token" ||
+        (tokenGuest.officialStatus === "declined" &&
+          tokenGuest.confirmationSource !== "import"))
+    ) {
       return NextResponse.json({ message: RSVP_MESSAGES.already }, { status: 409 });
     }
   }
 
-  let guestId = linkedGuest?.id ?? null;
-  let matchingState: "suggested" | "unmatched" | "linked" = linkedGuest
-    ? "suggested"
-    : "unmatched";
-
+  let guestId = tokenGuestId;
   if (!guestId) {
     const { data: created, error: createError } = await supabase
       .from("guests")
@@ -230,7 +220,6 @@ export async function POST(request: Request) {
       );
     }
     guestId = created.id as string;
-    matchingState = "unmatched";
   } else {
     await supabase
       .from("guests")
@@ -253,13 +242,13 @@ export async function POST(request: Request) {
       normalized_submitted_name: normalized,
       attendance_choice: input.attending,
       optional_contact: contact,
-      matching_state: matchingState,
+      matching_state: suggestedIds.length ? "suggested" : "unmatched",
       review_status: "pending_review",
       consent_version: CONSENT_VERSION,
       request_fingerprint_hash: ipHash,
-      suggested_guest_ids: guestId ? [guestId] : [],
+      suggested_guest_ids: suggestedIds.length ? suggestedIds : [guestId],
       receipt_token_hash: receiptHash,
-      idempotency_key: input.idempotencyKey ?? null,
+      idempotency_key: idempotencyKey,
       bringing_companion: bringingCompanion,
       companion_name: companionName,
       companion_is_child: companionIsChild,

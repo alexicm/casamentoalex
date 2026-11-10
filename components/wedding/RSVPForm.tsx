@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createRitual, firstNameOf, writeRitual } from "@/lib/confirmation-ritual";
 import { formatRsvpDeadline, type PublicEvent } from "@/lib/event/defaults";
@@ -16,10 +16,17 @@ type Status =
   | { kind: "loading" }
   | { kind: "error"; message: string };
 
+function createIdempotencyKey() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `rsvp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 export function RSVPForm({ event, inviteToken, setupPending }: RSVPFormProps) {
   const deadlineLabel = formatRsvpDeadline(event.rsvpDeadline);
   const router = useRouter();
-  const idempotencyKey = useId();
+  const idempotencyKey = useRef(createIdempotencyKey());
   const [attending, setAttending] = useState<boolean | null>(null);
   const [fullName, setFullName] = useState("");
   const [bringingCompanion, setBringingCompanion] = useState(false);
@@ -72,7 +79,7 @@ export function RSVPForm({ event, inviteToken, setupPending }: RSVPFormProps) {
           consent,
           website,
           inviteToken,
-          idempotencyKey,
+          idempotencyKey: idempotencyKey.current,
           bringingCompanion: attending ? bringingCompanion : false,
           companionName: attending && bringingCompanion ? companionName.trim() : "",
           companionIsChild: attending && bringingCompanion && companionIsChild,
