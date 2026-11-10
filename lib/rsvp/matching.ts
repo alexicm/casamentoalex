@@ -14,6 +14,22 @@ export type MatchSuggestion = {
   reason: string;
 };
 
+function nameTokens(value: string) {
+  return normalizeName(value).split(" ").filter((token) => token.length >= 2);
+}
+
+function uniqueTokenIndex(guests: MatchableGuest[]) {
+  const index = new Map<string, MatchableGuest[]>();
+  for (const guest of guests) {
+    for (const token of nameTokens(guest.normalizedName)) {
+      const list = index.get(token) ?? [];
+      list.push(guest);
+      index.set(token, list);
+    }
+  }
+  return index;
+}
+
 export function suggestMatches(
   submittedName: string,
   guests: MatchableGuest[],
@@ -39,6 +55,26 @@ export function suggestMatches(
     };
   }
 
+  const contained = guests.filter(
+    (guest) =>
+      normalized.includes(guest.normalizedName) ||
+      guest.normalizedName.includes(normalized),
+  );
+  if (contained.length === 1) {
+    return {
+      state: "suggested",
+      candidates: contained,
+      reason: "contained-name",
+    };
+  }
+  if (contained.length > 1) {
+    return {
+      state: "ambiguous",
+      candidates: contained,
+      reason: "contained-homonym",
+    };
+  }
+
   const token = firstToken(submittedName);
   const firstNameMatches = guests.filter(
     (guest) => firstToken(guest.normalizedName) === token,
@@ -55,6 +91,28 @@ export function suggestMatches(
       state: "suggested",
       candidates: firstNameMatches,
       reason: "first-name",
+    };
+  }
+
+  const tokenIndex = uniqueTokenIndex(guests);
+  const hits = new Map<string, MatchableGuest>();
+  for (const submittedToken of nameTokens(normalized)) {
+    const owners = tokenIndex.get(submittedToken) ?? [];
+    if (owners.length !== 1 || !owners[0]) continue;
+    hits.set(owners[0].id, owners[0]);
+  }
+  if (hits.size === 1) {
+    return {
+      state: "suggested",
+      candidates: [...hits.values()],
+      reason: "unique-token",
+    };
+  }
+  if (hits.size > 1) {
+    return {
+      state: "ambiguous",
+      candidates: [...hits.values()],
+      reason: "multi-token-hit",
     };
   }
 

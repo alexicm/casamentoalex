@@ -41,6 +41,30 @@ describe("sugestão interna de nomes", () => {
     expect(result.state).toBe("unmatched");
   });
 
+  it("reconhece nome completo maior que o da lista", () => {
+    const result = suggestMatches("Heloísa Noleto Silva", guests);
+    expect(result.state).toBe("suggested");
+    expect(result.candidates[0]?.displayName).toBe("Heloísa Noleto");
+  });
+
+  it("reconhece sobrenome único mesmo com nome diferente do WhatsApp", () => {
+    const list = [
+      {
+        id: "1",
+        displayName: "Clério Rodrigo",
+        normalizedName: normalizeName("Clério Rodrigo"),
+      },
+      {
+        id: "2",
+        displayName: "Victoria Silva",
+        normalizedName: normalizeName("Victoria Silva"),
+      },
+    ];
+    const result = suggestMatches("C.Rodrigo Silva Leite", list);
+    expect(result.state).toBe("suggested");
+    expect(result.candidates[0]?.displayName).toBe("Clério Rodrigo");
+  });
+
   it("só aceita nomes únicos da lista", () => {
     expect(resolveListedGuest("Heloísa", guests).ok).toBe(true);
     expect(resolveListedGuest("Carolina", guests)).toEqual({ ok: false, code: "ambiguous" });

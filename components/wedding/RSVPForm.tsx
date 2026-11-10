@@ -130,9 +130,9 @@ export function RSVPForm({ event, inviteToken, setupPending }: RSVPFormProps) {
           </p>
         ) : null}
         <p className="mx-auto mt-3 max-w-md text-center text-[0.98rem] leading-relaxed text-ink/80">
-          Só quem está na lista consegue confirmar, e cada nome responde uma
-          vez. Se for levar alguém, a gente precisa do nome. Criança até 10
-          anos vem junto, mas não ocupa lugar extra.
+          Escreva seu nome e confirme uma vez. Se for levar alguém, a gente
+          precisa do nome. Criança até 10 anos vem junto, mas não ocupa lugar
+          extra.
         </p>
 
         {setupPending ? (
