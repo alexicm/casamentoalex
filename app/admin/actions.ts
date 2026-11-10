@@ -44,10 +44,34 @@ export async function updateGuestStatus(guestId: string, status: "manually_confi
   await service.from("rsvp_audit_log").insert({
     guest_id: guestId,
     actor_type: "admin",
-    actor_id: admin.id,
+    actor_id: admin.id || null,
     action: `set_status:${status}`,
     before_json: before,
     after_json: { official_status: status },
+  });
+  revalidatePath("/admin/dashboard");
+}
+
+export async function updateGuestListOwner(
+  guestId: string,
+  groupOwner: "Alex" | "Paloma",
+) {
+  const admin = await requireAdmin();
+  const service = createServiceClient();
+  const { data: before } = await service.from("guests").select("*").eq("id", guestId).single();
+  if (!before) throw new Error("GUEST_NOT_FOUND");
+  const { error } = await service
+    .from("guests")
+    .update({ group_owner: groupOwner })
+    .eq("id", guestId);
+  if (error) throw new Error(error.message);
+  await service.from("rsvp_audit_log").insert({
+    guest_id: guestId,
+    actor_type: "admin",
+    actor_id: admin.id || null,
+    action: "set_list_owner",
+    before_json: { group_owner: before.group_owner },
+    after_json: { group_owner: groupOwner },
   });
   revalidatePath("/admin/dashboard");
 }

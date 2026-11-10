@@ -1,10 +1,12 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import {
   approveSubmission,
   discardSubmission,
   signOut,
+  updateGuestListOwner,
 } from "@/app/admin/actions";
 import type { AdminGuest } from "@/lib/rsvp/admin-view";
 import { companionLabel, guestConfirmedViaSite } from "@/lib/rsvp/seats";
@@ -59,10 +61,13 @@ export function DashboardClient({
   stats,
   localMode = false,
 }: DashboardClientProps) {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [owner, setOwner] = useState("all");
   const [pending, startTransition] = useTransition();
   const [owners, setOwners] = useState<Record<string, "Alex" | "Paloma">>({});
+  const [guestOwners, setGuestOwners] = useState<Record<string, "Alex" | "Paloma">>({});
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   const confirmed = useMemo(
     () =>
@@ -98,9 +103,25 @@ export function DashboardClient({
     });
   }, [confirmed, owner, query]);
 
-  function run(action: () => Promise<void>) {
+  function run(action: () => Promise<void>, okMessage?: string) {
     startTransition(() => {
-      void action();
+      void (async () => {
+        try {
+          await action();
+          if (okMessage) setStatusMessage(okMessage);
+          router.refresh();
+        } catch {
+          setStatusMessage("Não foi possível salvar agora. Tente de novo.");
+        }
+      })();
+    });
+  }
+
+  function refreshNow() {
+    setStatusMessage(null);
+    startTransition(() => {
+      router.refresh();
+      setStatusMessage("Painel atualizado.");
     });
   }
 
@@ -112,9 +133,14 @@ export function DashboardClient({
             <p className="eyebrow">Organização</p>
             <h1 className="mt-2 font-serif text-4xl text-olive">Painel Alex & Paloma</h1>
             <p className="mt-2 text-sm text-ink/70">
-              Qualquer pessoa pode se cadastrar. Você valida cada entrada aqui
-              antes de entrar na lista confirmada.
+              Qualquer pessoa pode se cadastrar. Vocês validam, escolhem a lista
+              Alex ou Paloma e salvam.
             </p>
+            {statusMessage ? (
+              <p className="mt-2 text-sm text-olive" role="status">
+                {statusMessage}
+              </p>
+            ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {localMode ? (
@@ -122,6 +148,14 @@ export function DashboardClient({
                 Respostas locais
               </p>
             ) : null}
+            <button
+              type="button"
+              onClick={refreshNow}
+              disabled={pending}
+              className="focus-ring min-h-11 rounded-full border border-olive/20 px-4 text-sm disabled:opacity-60"
+            >
+              {pending ? "Atualizando…" : "Atualizar"}
+            </button>
             <form action={signOut}>
               <button className="focus-ring min-h-11 rounded-full border border-olive/20 px-4 text-sm">
                 Sair
@@ -148,10 +182,17 @@ export function DashboardClient({
                 {pendingList.length === 1
                   ? "pessoa aguardando"
                   : "pessoas aguardando"}{" "}
-                sua aprovação
+                · escolha Lista Alex ou Lista Paloma e salve
               </p>
             </div>
-            {pending ? <p className="text-sm text-ink/50">Salvando…</p> : null}
+            <button
+              type="button"
+              onClick={refreshNow}
+              disabled={pending}
+              className="focus-ring min-h-11 rounded-full border border-olive/20 px-4 text-sm disabled:opacity-60"
+            >
+              Atualizar fila
+            </button>
           </div>
 
           {pendingList.length === 0 ? (
@@ -183,34 +224,45 @@ export function DashboardClient({
                         </p>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <select
-                          value={selectedOwner}
-                          onChange={(event) =>
-                            setOwners((current) => ({
-                              ...current,
-                              [item.id]: event.target.value as "Alex" | "Paloma",
-                            }))
-                          }
-                          className="focus-ring min-h-11 rounded-full border border-olive/20 px-3 text-sm"
-                          aria-label={`Lista de ${item.submitted_full_name}`}
-                        >
-                          <option value="Alex">Lista Alex</option>
-                          <option value="Paloma">Lista Paloma</option>
-                        </select>
+                        <label className="flex min-h-11 items-center gap-2 rounded-full border border-olive/20 px-3 text-sm">
+                          <span className="text-ink/60">Lista</span>
+                          <select
+                            value={selectedOwner}
+                            onChange={(event) =>
+                              setOwners((current) => ({
+                                ...current,
+                                [item.id]: event.target.value as "Alex" | "Paloma",
+                              }))
+                            }
+                            className="bg-transparent py-2 outline-none"
+                            aria-label={`Lista de ${item.submitted_full_name}`}
+                          >
+                            <option value="Alex">Alex</option>
+                            <option value="Paloma">Paloma</option>
+                          </select>
+                        </label>
                         <button
                           type="button"
                           disabled={pending}
                           onClick={() =>
-                            run(() => approveSubmission(item.id, selectedOwner))
+                            run(
+                              () => approveSubmission(item.id, selectedOwner),
+                              `${item.submitted_full_name} salvo na lista ${selectedOwner}.`,
+                            )
                           }
                           className="focus-ring min-h-11 rounded-full bg-olive px-4 text-sm text-paper-light disabled:opacity-60"
                         >
-                          Aprovar
+                          Salvar e aprovar
                         </button>
                         <button
                           type="button"
                           disabled={pending}
-                          onClick={() => run(() => discardSubmission(item.id))}
+                          onClick={() =>
+                            run(
+                              () => discardSubmission(item.id),
+                              `${item.submitted_full_name} recusado.`,
+                            )
+                          }
                           className="focus-ring min-h-11 rounded-full border border-olive/20 px-4 text-sm disabled:opacity-60"
                         >
                           Recusar
@@ -230,7 +282,8 @@ export function DashboardClient({
               <h2 className="font-serif text-2xl text-olive">Quem confirmou</h2>
               <p className="text-sm text-ink/70">
                 {filtered.length}{" "}
-                {filtered.length === 1 ? "pessoa validada" : "pessoas validadas"}
+                {filtered.length === 1 ? "pessoa validada" : "pessoas validadas"} ·
+                dá para mudar a lista e salvar
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -270,26 +323,62 @@ export function DashboardClient({
                     <th className="py-2 pr-3">Nome</th>
                     <th className="py-2 pr-3">Lista</th>
                     <th className="py-2 pr-3">Acompanhante</th>
-                    <th className="py-2">Contato</th>
+                    <th className="py-2 pr-3">Contato</th>
+                    <th className="py-2">Ação</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((guest) => (
-                    <tr key={guest.id} className="border-t border-olive/10">
-                      <td className="py-3 pr-3 font-medium">{guest.display_name}</td>
-                      <td className="py-3 pr-3">{guest.group_owner}</td>
-                      <td className="py-3 pr-3">
-                        {companionLabel({
-                          officialStatus: guest.official_status,
-                          confirmationSource: guest.confirmation_source,
-                          bringingCompanion: guest.bringing_companion,
-                          companionName: guest.companion_name,
-                          companionIsChild: guest.companion_is_child,
-                        })}
-                      </td>
-                      <td className="py-3">{guest.preferred_contact ?? "-"}</td>
-                    </tr>
-                  ))}
+                  {filtered.map((guest) => {
+                    const selected =
+                      guestOwners[guest.id] ?? guest.group_owner;
+                    const dirty = selected !== guest.group_owner;
+                    return (
+                      <tr key={guest.id} className="border-t border-olive/10">
+                        <td className="py-3 pr-3 font-medium">{guest.display_name}</td>
+                        <td className="py-3 pr-3">
+                          <select
+                            value={selected}
+                            onChange={(event) =>
+                              setGuestOwners((current) => ({
+                                ...current,
+                                [guest.id]: event.target.value as "Alex" | "Paloma",
+                              }))
+                            }
+                            className="focus-ring min-h-10 rounded-full border border-olive/20 px-3"
+                            aria-label={`Lista de ${guest.display_name}`}
+                          >
+                            <option value="Alex">Alex</option>
+                            <option value="Paloma">Paloma</option>
+                          </select>
+                        </td>
+                        <td className="py-3 pr-3">
+                          {companionLabel({
+                            officialStatus: guest.official_status,
+                            confirmationSource: guest.confirmation_source,
+                            bringingCompanion: guest.bringing_companion,
+                            companionName: guest.companion_name,
+                            companionIsChild: guest.companion_is_child,
+                          })}
+                        </td>
+                        <td className="py-3 pr-3">{guest.preferred_contact ?? "-"}</td>
+                        <td className="py-3">
+                          <button
+                            type="button"
+                            disabled={pending || !dirty}
+                            onClick={() =>
+                              run(
+                                () => updateGuestListOwner(guest.id, selected),
+                                `${guest.display_name} movido para lista ${selected}.`,
+                              )
+                            }
+                            className="focus-ring min-h-10 rounded-full border border-olive/20 px-3 text-sm disabled:opacity-40"
+                          >
+                            Salvar
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
