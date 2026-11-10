@@ -8,10 +8,10 @@ export const rsvpInputSchema = z
     fullName: z
       .string()
       .trim()
-      .min(2, "Escreva seu nome completo.")
+      .min(2, "Escreva seu nome.")
       .max(120, "O nome está longo demais.")
       .refine((value) => !/https?:\/\//i.test(value), "Remova links do nome.")
-      .refine((value) => nameTokenCount(value) >= 1, "Escreva seu nome como no convite."),
+      .refine((value) => nameTokenCount(value) >= 1, "Escreva seu nome."),
     attending: z.boolean(),
     contact: z.string().trim().max(40).optional(),
     consent: z.boolean().refine((value) => value === true, {

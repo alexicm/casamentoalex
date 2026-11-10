@@ -51,7 +51,7 @@ export function RSVPForm({ event, inviteToken, setupPending }: RSVPFormProps) {
     const formData = new FormData(event.currentTarget);
     const submittedName = String(formData.get("fullName") ?? fullName).trim();
     if (submittedName.length < 2) {
-      setStatus({ kind: "error", message: "Escreva seu nome como no convite." });
+      setStatus({ kind: "error", message: "Escreva seu nome." });
       return;
     }
     if (attending && bringingCompanion && companionName.trim().length < 2) {
@@ -168,13 +168,12 @@ export function RSVPForm({ event, inviteToken, setupPending }: RSVPFormProps) {
             autoComplete="name"
             value={fullName}
             onChange={(event) => setFullName(event.target.value)}
-            placeholder="Como no convite"
+            placeholder="Seu nome"
             className="letter-field focus-ring min-h-12 w-full bg-transparent px-1 text-lg text-ink"
           />
         </label>
         <p className="mt-2 text-xs leading-relaxed text-ink/55">
-          Use o nome como está na lista. Se tiver sobrenome, escreva também,
-          assim não misturamos pessoas com o mesmo prenome.
+          Pode escrever o nome como você usa no dia a dia.
         </p>
 
         {attending ? (

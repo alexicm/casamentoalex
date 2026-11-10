@@ -74,16 +74,16 @@ export async function POST(request: Request) {
   const bringingCompanion = Boolean(input.attending && input.bringingCompanion);
   const companionIsChild = Boolean(bringingCompanion && input.companionIsChild);
   const companionName = bringingCompanion ? input.companionName?.trim() || null : null;
+  const displayName = input.fullName.trim();
+  const normalized = normalizeName(displayName);
 
   if (!supabaseReady) {
     const listed = listedGuestsForMatching();
     const localMatch = resolveListedGuest(input.fullName, listed);
-    if (localMatch.ok === false && localMatch.code === "ambiguous") {
-      return NextResponse.json({ message: RSVP_MESSAGES.ambiguous }, { status: 400 });
-    }
-    const seed = localMatch.ok
-      ? ALL_SEED_GUESTS.find((guest) => guest.seedKey === localMatch.guest.id)
-      : undefined;
+    const seed =
+      localMatch.ok
+        ? ALL_SEED_GUESTS.find((guest) => guest.seedKey === localMatch.guest.id)
+        : undefined;
     if (
       seed &&
       !guestMayConfirmViaForm(seed.officialStatus, seed.confirmationSource)
@@ -91,9 +91,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: RSVP_MESSAGES.already }, { status: 409 });
     }
     const saved = await saveLocalRsvp({
-      guestSeedKey: localMatch.ok ? localMatch.guest.id : `walk-in:${normalizeName(input.fullName)}`,
-      guestDisplayName: localMatch.ok ? localMatch.guest.displayName : input.fullName.trim(),
-      fullName: input.fullName.trim(),
+      guestSeedKey:
+        localMatch.ok && seed
+          ? localMatch.guest.id
+          : `walk-in:${normalized}`,
+      guestDisplayName: displayName,
+      fullName: displayName,
       attending: input.attending,
       contact,
       receipt,
@@ -130,7 +133,6 @@ export async function POST(request: Request) {
     );
   }
 
-  const normalized = normalizeName(input.fullName);
   const token = input.inviteToken?.trim() || "";
 
   const { data: guests } = await supabase
@@ -160,19 +162,10 @@ export async function POST(request: Request) {
     }
   }
 
-  if (!matched.ok && matched.code === "ambiguous") {
-    return NextResponse.json({ message: RSVP_MESSAGES.ambiguous }, { status: 400 });
-  }
-
+  // Nome livre: só vincula se o match for único; ambíguo ou desconhecido vira cadastro novo.
   let guest =
     matched.ok
-      ? (guestList.find((entry) => entry.id === matched.guest.id) ?? {
-          ...matched.guest,
-          inviteTokenHash: null,
-          officialStatus: "awaiting_response",
-          confirmationSource: "import",
-          groupOwner: "Alex" as const,
-        })
+      ? (guestList.find((entry) => entry.id === matched.guest.id) ?? null)
       : null;
 
   if (guest && !guestMayConfirmViaForm(guest.officialStatus, guest.confirmationSource)) {
@@ -196,42 +189,33 @@ export async function POST(request: Request) {
     }
   }
 
+  const { data: priorByName } = await supabase
+    .from("rsvp_submissions")
+    .select("id")
+    .eq("event_id", event.id)
+    .eq("normalized_submitted_name", normalized)
+    .neq("review_status", "discarded")
+    .limit(1);
+  if (priorByName && priorByName.length > 0) {
+    return NextResponse.json({ message: RSVP_MESSAGES.already }, { status: 409 });
+  }
+
   if (guest) {
-    const [{ data: priorByGuest }, { data: priorByName }] = await Promise.all([
-      supabase
-        .from("rsvp_submissions")
-        .select("id")
-        .eq("event_id", event.id)
-        .eq("guest_id", guest.id)
-        .neq("review_status", "discarded")
-        .limit(1),
-      supabase
-        .from("rsvp_submissions")
-        .select("id")
-        .eq("event_id", event.id)
-        .eq("normalized_submitted_name", guest.normalizedName)
-        .neq("review_status", "discarded")
-        .limit(1),
-    ]);
-    if ((priorByGuest && priorByGuest.length > 0) || (priorByName && priorByName.length > 0)) {
-      return NextResponse.json({ message: RSVP_MESSAGES.already }, { status: 409 });
-    }
-  } else {
-    const { data: priorByName } = await supabase
+    const { data: priorByGuest } = await supabase
       .from("rsvp_submissions")
       .select("id")
       .eq("event_id", event.id)
-      .eq("normalized_submitted_name", normalized)
+      .eq("guest_id", guest.id)
       .neq("review_status", "discarded")
       .limit(1);
-    if (priorByName && priorByName.length > 0) {
+    if (priorByGuest && priorByGuest.length > 0) {
       return NextResponse.json({ message: RSVP_MESSAGES.already }, { status: 409 });
     }
   }
 
   const nextStatus = input.attending ? "confirmed_via_token" : "declined";
   const confirmationSource = token ? "personal_link" : "public_form";
-  const displayName = input.fullName.trim();
+  let linkedFromList = Boolean(guest);
 
   if (!guest) {
     const { data: created, error: createError } = await supabase
@@ -268,6 +252,7 @@ export async function POST(request: Request) {
       confirmationSource: created.confirmation_source as string,
       groupOwner: created.group_owner as "Alex" | "Paloma",
     };
+    linkedFromList = false;
   }
 
   const { data: submission, error: insertError } = await supabase
@@ -305,6 +290,8 @@ export async function POST(request: Request) {
   const { error: updateError } = await supabase
     .from("guests")
     .update({
+      display_name: displayName,
+      normalized_name: normalized,
       official_status: nextStatus,
       confirmation_source: confirmationSource,
       preferred_contact: contact ?? before?.preferred_contact,
@@ -325,7 +312,11 @@ export async function POST(request: Request) {
     guest_id: guest.id,
     submission_id: submission.id,
     actor_type: "guest",
-    action: token ? "confirm_via_token" : matched.ok ? "confirm_via_list" : "confirm_via_form_walk_in",
+    action: token
+      ? "confirm_via_token"
+      : linkedFromList
+        ? "confirm_via_list"
+        : "confirm_via_form_open",
     before_json: before,
     after_json: {
       official_status: nextStatus,
